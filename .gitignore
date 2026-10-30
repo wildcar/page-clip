@@ -1,0 +1,17 @@
+# Local agent / editor settings
+.claude/settings.local.json
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Node tooling (optional ESLint)
+node_modules/
+
+# Packed builds
+*.zip
+*.crx
+*.pem
