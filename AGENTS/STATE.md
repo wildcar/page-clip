@@ -11,7 +11,7 @@ presets (first: SM-Clinic "Информация о приёме"). Design: `docs
 
 ## Now
 
-- New preset `smclinic-study` ("Информация об исследовании"): the results PDF is caught when the extension clicks "Посмотреть результаты обследования" and its text goes into the PDF / Markdown export. Extraction checked on the real results PDF (local, not committed); capture checked only in the harness. `test/harness.html` 104/104.
+- Preset `smclinic-study` ("Информация об исследовании"): year and result text from the study JSON (`/api/diagnostics/<uuid>`: `analysisDateTime`, `result`); fallback: the results PDF caught on clicking "Посмотреть результаты обследования". Print: only small blocks are kept whole, headings stay with the next text. `test/harness.html` 110/110.
 - v0.1 checked by the user on the live SM-Clinic page: works, year 2019 taken from the API. File name `Приём <date> <specialty>`; the found year is also inserted into the date text of the saved document (user-checked).
 - Visit year: from `visit.dateTime` of the visit JSON the page loaded (`/api/visits/<uuid>`);
   fallback: on-page year dialog, answer remembered per visit.
@@ -19,7 +19,7 @@ presets (first: SM-Clinic "Информация о приёме"). Design: `docs
 ## Next
 
 - User check on the live study page: PDF text appears, no file download / new tab is left behind.
-- Study year: no API known; the year is asked. Ask the user for the study JSON URL (DevTools → Network), as for visits.
+- User check of the print page breaks on a long study result.
 
 ## Open questions
 

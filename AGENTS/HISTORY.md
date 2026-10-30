@@ -4,6 +4,12 @@ Newest first. Each entry ≤5 lines using the format defined in `AGENTS.md`.
 
 ---
 
+## 2026-10-31 · Study year and result from the API; print page breaks
+- What: study preset takes the year (`analysisDateTime`) and result text (`result`) from `/api/diagnostics/<uuid>`, PDF capture is the fallback (`attachments[].api`); print keeps only blocks under 500 px whole, headings `break-after: avoid`
+- Why: user found the study JSON; tall blocks jumped to the next page leaving headings behind
+- Files: extension/content.js, extension/print.css, extension/presets/builtin.js, test/harness.html, AGENTS/SPEC.md
+- Next: user check of the printed study page
+
 ## 2026-10-31 · Study page preset with the results PDF text
 - What: preset `smclinic-study`; preset key `attachments`: click the site's file control, catch the PDF in the page world (`pagehook.js`), extract text (`lib/pdftext.js`, no deps), insert it into the export
 - Why: user request: results are only a PDF download with plain text

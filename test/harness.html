@@ -319,6 +319,11 @@
       T.mark(blocks, preset.hide);
       check("html gets data-pb-active", document.documentElement.hasAttribute("data-pb-active"));
       check("blocks get data-pb-keep", blocks.every((b) => b.hasAttribute("data-pb-keep")));
+      check("small block kept whole on paper", blocks[0].hasAttribute("data-pb-whole"));
+      blocks[1].style.minHeight = "2000px";
+      T.mark(blocks, preset.hide);
+      check("tall block may break across pages", !blocks[1].hasAttribute("data-pb-whole"));
+      blocks[1].style.minHeight = "";
       check("ancestors get data-pb-path", $(".admission").hasAttribute("data-pb-path") && document.body.hasAttribute("data-pb-path"));
       check("crumbs are neither kept nor on the path", !$(".sm-crumbs").matches("[data-pb-keep], [data-pb-path]"));
       check("share button hidden", $(".doctor-recommendation__details button").closest("[data-pb-hide]"));
@@ -329,7 +334,7 @@
       check("tidy: trailing tabs and blank lines removed", !/[\t]\n|\n\s*$/.test(rec.textContent) && rec.textContent !== recBefore);
       T.cleanup();
       check("cleanup restores tidied text", rec.textContent === recBefore);
-      eq("cleanup removes every data-pb-* attribute", document.querySelectorAll("[data-pb-keep],[data-pb-path],[data-pb-hide],[data-pb-active],[data-pb-preline]").length, 0);
+      eq("cleanup removes every data-pb-* attribute", document.querySelectorAll("[data-pb-keep],[data-pb-path],[data-pb-hide],[data-pb-active],[data-pb-preline],[data-pb-whole]").length, 0);
 
       // Markdown for the preset.
       T.mark(blocks, preset.hide);
@@ -465,6 +470,21 @@
       siteMode = "json";
       check("hook: base64 PDF inside JSON", (await studyMd()).md.includes("Норма есть"));
       check("hook: capture flag removed", !document.documentElement.hasAttribute("data-pb-capture"));
+
+      // Study JSON: year from "analysisDateTime", result text from "result" (no click then).
+      let siteClicks = 0;
+      $(".result-link").addEventListener("click", () => siteClicks++);
+      env.resources = () => [`${location.origin}/api/diagnostics/${idA}?accountId=x`];
+      env.fetchJson = async () => ({
+        diagnostic: { analysisDateTime: "2026-09-23T16:43:00", result: "Заключение\n Строка   один \nстрока два \n\n\nВторой абзац\n\n" },
+      });
+      eq("study api: year", await T.buildTitle(study, answer(1999)), "Исследование 2026-09-23 УЗДС вен нижних конечностей");
+      const apiMd = (await studyMd()).md;
+      check("study api: result text with its line breaks", apiMd.includes("Заключение  \nСтрока один  \nстрока два\n\nВторой абзац\n"), apiMd);
+      eq("study api: nothing clicked", siteClicks, 0);
+      env.fetchJson = async () => { throw new Error("HTTP 401"); };
+      check("study api: failed request → PDF", (await studyMd()).md.includes("Норма есть") && siteClicks === 1);
+      Object.assign(env, real);
 
       // URL match patterns.
       const m = PageClip.matchUrl;

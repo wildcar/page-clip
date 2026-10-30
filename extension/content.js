@@ -15,6 +15,7 @@
     active: "data-pb-active",
     preline: "data-pb-preline",
     added: "data-pb-added",
+    whole: "data-pb-whole",
     capture: "data-pb-capture",
     hover: "data-pb-hover",
     picked: "data-pb-picked",
@@ -449,8 +450,15 @@
     });
   }
 
-  // Inserted after the file's container while exporting: one paragraph per PDF paragraph,
-  // its hard line breaks kept. cleanup() removes it.
+  // Paragraphs (blank-line separated) of trimmed, non-empty lines with single spaces.
+  const paragraphs = (text) =>
+    (text || "")
+      .split(/\r?\n[ \t ]*(?:\r?\n\s*)+/)
+      .map((p) => p.split(/\r?\n/).map(clean).filter(Boolean))
+      .filter((p) => p.length);
+
+  // Inserted after the file's container while exporting: one paragraph per text paragraph,
+  // its line breaks kept. cleanup() removes it.
   function attachmentNode(text, error) {
     const box = document.createElement("div");
     box.setAttribute(ATTR.added, "");
@@ -461,16 +469,18 @@
       p.append(em);
       box.append(p);
     }
-    for (const para of text ? text.split(/\n{2,}/) : []) {
+    for (const lines of paragraphs(text)) {
       const p = document.createElement("p");
-      para.split("\n").forEach((line, i) => p.append(...(i ? [document.createElement("br")] : []), line));
+      lines.forEach((line, i) => p.append(...(i ? [document.createElement("br")] : []), line));
       box.append(p);
     }
     return box;
   }
 
-  // Preset "attachments": [{ clickText | clickSelector, container }] — every control found is
-  // clicked in turn and the text of its PDF goes after its closest `container` (or itself).
+  // Preset "attachments": [{ api?, clickText | clickSelector, container }] — the text goes after
+  // the control's closest `container` (or the control itself). With `api` (see apiValue) and a
+  // value there, that text is used once and nothing is clicked; otherwise every control found is
+  // clicked in turn and the text of its PDF is used.
   async function attachmentNodes(preset) {
     const out = [];
     const atts = preset?.attachments || [];
@@ -479,6 +489,12 @@
     try {
       for (const att of atts) {
         const controls = att.clickSelector ? querySafe(att.clickSelector, true) : elementsWithText(att.clickText || "");
+        const placeOf = (control) => (att.container && control.closest(att.container)) || control;
+        const fromApi = att.api && controls.length ? await apiValue(att.api, (v) => !!v.trim()) : null;
+        if (fromApi) {
+          out.push({ after: placeOf(controls[0]), node: attachmentNode(fromApi) });
+          continue;
+        }
         for (const control of controls) {
           let text = "";
           let error = null;
@@ -488,8 +504,7 @@
           } catch (e) {
             error = String(e.message || e);
           }
-          const after = (att.container && control.closest(att.container)) || control;
-          out.push({ after, node: attachmentNode(text, error) });
+          out.push({ after: placeOf(control), node: attachmentNode(text, error) });
         }
       }
     } finally {
@@ -544,7 +559,7 @@
     for (const [node, value] of changedText) node.nodeValue = value;
     changedText.clear();
     for (const el of document.querySelectorAll(`[${ATTR.added}]`)) el.remove();
-    for (const name of [ATTR.keep, ATTR.path, ATTR.hide, ATTR.active, ATTR.preline]) {
+    for (const name of [ATTR.keep, ATTR.path, ATTR.hide, ATTR.active, ATTR.preline, ATTR.whole]) {
       for (const el of document.querySelectorAll(`[${name}]`)) el.removeAttribute(name);
     }
   }
@@ -559,8 +574,16 @@
     applyHide(hideRules);
     for (const { el, year } of edits.years || []) if (el?.isConnected) insertYearInto(el, year);
     for (const { after, node } of edits.nodes || []) if (after?.isConnected) after.after(node);
+    // Only blocks well under a page are kept whole on paper: a taller one would be pushed to the
+    // next page as a unit, leaving a gap and its heading behind (print.css).
+    for (const block of blocks) {
+      if (block.getBoundingClientRect().height < WHOLE_MAX_PX) block.setAttribute(ATTR.whole, "");
+    }
     document.documentElement.setAttribute(ATTR.active, "");
   }
+
+  // ~ half of an A4 page at 96 px/in with 12 mm margins.
+  const WHOLE_MAX_PX = 500;
 
   function printBlocks(blocks, hideRules, title, edits) {
     mark(blocks, hideRules, edits);

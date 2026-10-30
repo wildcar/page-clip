@@ -40,7 +40,21 @@
     box-shadow: none !important;
     max-width: 100% !important;
     margin: 0 0 6mm !important;
+  }
+
+  /* Small blocks (content.js measures them) stay on one page; tall ones may break, but not
+     inside a line of text, and a heading stays with what follows it. */
+  html[data-pb-active] [data-pb-whole] {
     break-inside: avoid;
+  }
+
+  html[data-pb-active] [data-pb-keep] :is(p, li, tr, img, h1, h2, h3, h4, h5, h6) {
+    break-inside: avoid;
+  }
+
+  /* Sites often style captions as <p class="…__title">. */
+  html[data-pb-active] :is(h1, h2, h3, h4, h5, h6, [class*="title"], [class*="headline"], [class*="heading"]):is([data-pb-keep], [data-pb-keep] *) {
+    break-after: avoid;
   }
 
   html[data-pb-active] [data-pb-keep],

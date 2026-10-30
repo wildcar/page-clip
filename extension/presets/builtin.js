@@ -60,10 +60,24 @@ PageClip.BUILTIN = [
     hide: [{ selector: ".sm-crumbs, .go-back, .result-wrapper" }],
     title: "Исследование {date} {exam}",
     fields: {
-      date: { afterLabel: "Дата проведения исследования", format: "date", askYear: true, insertYear: true },
+      date: {
+        afterLabel: "Дата проведения исследования",
+        format: "date",
+        // The page shows no year; the study JSON the page loads has "diagnostic.analysisDateTime".
+        api: { url: "/api/diagnostics/[0-9a-f-]{36}(\\?|$)", path: "diagnostic.analysisDateTime" },
+        askYear: true,
+        insertYear: true,
+      },
       exam: { selector: ".analysis-examination__text" },
     },
-    // "Посмотреть результаты обследования" downloads a text PDF; its text goes into the export.
-    attachments: [{ clickText: "Посмотреть результаты обследования", container: ".result-wrapper" }],
+    // "Посмотреть результаты обследования" downloads a text PDF. The same text, with its own line
+    // breaks, is "diagnostic.result" in the study JSON; the PDF is the fallback.
+    attachments: [
+      {
+        api: { url: "/api/diagnostics/[0-9a-f-]{36}(\\?|$)", path: "diagnostic.result" },
+        clickText: "Посмотреть результаты обследования",
+        container: ".result-wrapper",
+      },
+    ],
   },
 ];
