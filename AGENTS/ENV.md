@@ -22,6 +22,7 @@ Update whenever a new tool, credential, or host-specific quirk is learned.
 ```
 git remote: https://github.com/wildcar/page-clip (branch main)
 browser://extensions   — load / reload the unpacked extension (folder extension/)
+pwsh tools/serve.ps1 -Root <repo> [-Port 8765]   — localhost static server for test/harness.html
 ```
 
 ## Host-specific quirks

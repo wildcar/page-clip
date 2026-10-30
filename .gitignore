@@ -15,3 +15,7 @@ node_modules/
 *.zip
 *.crx
 *.pem
+
+# Real page dumps with personal data (never commit: repo is public)
+docs/adr/*outerHTML*
+*.local.html

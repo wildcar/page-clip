@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <title>SM-Clinic | История посещений</title>
+    <!--
+      Browser test page for the preset engine, title fields, Markdown export and the selector
+      generator. Open this file in a Chromium browser; the result is in the title and in #results.
+      The fixture below is an anonymized, style-less copy of the app.smclinic.ru visit page
+      (structure and class names kept as on the real site, 2026-10-30).
+    -->
+    <style>
+      #results { font: 12px/1.4 monospace; white-space: pre-wrap; border: 1px solid #999; padding: 8px; }
+      .pass { color: #1a7f37; }
+      .fail { color: #c62828; }
+      /* Emulates the site: recommendations keep their line breaks. */
+      .doctor-extra-text--list { white-space: pre-line; }
+      .passport-info .dots::before { content: " • "; }
+      .hide { display: none; }
+    </style>
+  </head>
+  <body>
+    <pre id="results">running…</pre>
+
+    <div id="app" data-v-app="">
+      <section class="layout">
+        <header class="header my-[16px]">
+          <div class="loggedIn">
+            <div class="loggedIn__user"><p class="truncate-text truncate-text__contract">Петров Пётр Петрович</p></div>
+            <div class="card ym-hide-content"><p>Ваша карта</p><p>АБ0000000</p></div>
+          </div>
+          <div class="search-input"><input placeholder="ФИО врача, услуга, специальность, клиника" /></div>
+        </header>
+        <main class="main">
+          <div class="aside-menu-mobile">
+            <div class="button-container">
+              <button aria-label="Name" class="btn btn-secondary locate hide">Найти клинику</button>
+              <button aria-label="Name" class="btn btn-primary plus">Записать себя</button>
+            </div>
+          </div>
+          <div class="container">
+            <div class="inner">
+              <section class="admission">
+                <ul class="sm-crumbs">
+                  <li class="sm-crumbs-item"><a href="/" class="router-link-active link">Главная страница</a></li>
+                  <li class="sm-crumbs-item"><a href="/history" class="link">История посещений</a></li>
+                  <li class="sm-crumbs-item"><span class="last link">Информация о приёме</span></li>
+                </ul>
+                <div class="admission__headline">
+                  <h2>Информация о приёме</h2>
+                  <p class="go-back"><svg width="8" height="8"></svg> К списку приёмов </p>
+                </div>
+                <div>
+                  <div class="admission-info-wrapper">
+                    <div class="admission-info">
+                      <div class="admission-date">
+                        <p class="admission-info__title">Дата приёма</p>
+                        <h2>Понедельник, 12 октября, 15:06</h2>
+                        <h3>«СМ-Клиника» в Рязани, ул. Васильевская”</h3>
+                        <div class="flex items-center mb-1">
+                          <svg width="8" height="8"></svg>
+                          <p class="admission-info__grey-text">ул. Васильевская, стр.3</p>
+                        </div>
+                      </div>
+                      <div class="patient-info ym-hide-content">
+                        <p class="admission-info__title">Пациент</p>
+                        <h3 class="patient-info__name">Петров Пётр Петрович</h3>
+                        <p class="passport-info">
+                          <span>АБ0000000</span>
+                          <span class="dots">1 января 1980 (46 лет)</span>
+                          <span class="dots">пол: Мужской</span>
+                        </p>
+                      </div>
+                    </div>
+                    <div class="admission-info__details">
+                      <div class="status"><svg width="8" height="8"></svg><span>Приём завершён</span></div>
+                      <div class="transfer">
+                        <button aria-label="Name" class="btn btn-secondary more transfer__btn">
+                          <span> Повторить <br /> запись</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="doctor-info-wrapper">
+                  <div class="doctor-info doctor-info--border">
+                    <div class="doctors-image"><img alt="doctor-photo" class="doctor-photo" /></div>
+                    <div class="personal-info">
+                      <p class="doctors-specialization">Дерматовенеролог</p>
+                      <h2>Иванова Татьяна Геннадьевна</h2>
+                      <span class="personal-info__years">Стаж 13 года</span>
+                      <span class="experience-description">Врач высшей категории</span>
+                    </div>
+                  </div>
+                  <div class="doctor-extra">
+                    <p class="doctor-extra-header"> Выполненные услуги </p>
+                    <div><p class="doctor-extra-text">- Консультация врача с применением телемедицинских технологий</p></div>
+                  </div>
+                  <div class="doctor-recommendation">
+                    <div class="doctor-recommendation__body">
+                      <p class="doctor-extra-header">Рекомендации врача</p>
+                      <div>
+                        <p class="doctor-extra-text doctor-extra-text--list">Диагноз предварительный: ОРВИ
+Рекомендации:
+1. Режим амбулаторный
+2. Питьевой режим не менее 2 литров в сутки
+3. 	Таб. Пример 100 мг - по 1 *2 раза в день в течение 5 дней
+4. Повторный приём через 7 дней
+			</p>
+                      </div>
+                    </div>
+                    <div class="doctor-recommendation__details">
+                      <div class="sm-tooltip share-visit doctor-recommendation__trigger">
+                        <span data-v-tippy="" aria-expanded="false">
+                          <div class="trigger"><button aria-label="Name" class="btn btn-secondary"><span>Поделиться</span></button></div>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="doctor-info-wrapper">
+                  <div class="doctor-preparation">
+                    <div class="doctor-preparation__head">
+                      <span>Подготовка к приему</span>
+                      <div class="doctor-preparation__trigger"><span>Поделиться</span></div>
+                    </div>
+                    <div class="doctor-preparation__text">
+                      <p><a href="https://www.smclinic.ru/doctors/dermatolog.html" target="_blank">Подготовка к приему</a></p>
+                    </div>
+                  </div>
+                </div>
+                <div class="sm-slider">
+                  <div class="sm-slider__header"><p>Обратите внимание</p></div>
+                  <div class="swiper-slide slide"><p class="card-content">Карта родинок всего тела</p></div>
+                </div>
+              </section>
+            </div>
+          </div>
+        </main>
+        <footer class="footer"><p class="copyright">© 2002-2026 ООО «СМ-Клиника».</p></footer>
+      </section>
+    </div>
+
+    <!-- A generic page fragment for the Markdown converter and the selector generator. -->
+    <article id="generic">
+      <h1>Заголовок статьи</h1>
+      <p>Текст со <strong>жирным</strong>, <em>курсивом</em>, <code>кодом</code> и <a href="https://example.org/a b">ссылкой</a>.</p>
+      <ul>
+        <li>Первый пункт</li>
+        <li>Второй пункт
+          <ol><li>Вложенный</li></ol>
+        </li>
+      </ul>
+      <table>
+        <tr><th>Колонка</th><th>Значение</th></tr>
+        <tr><td>a|b</td><td>2</td></tr>
+      </table>
+      <pre>line 1
+  line 2</pre>
+      <div class="css-1x2y3z4 card" data-testid="info-card"><p>Карточка</p></div>
+      <div class="sc-AbCdE"><span>Первый</span><span>Второй</span></div>
+      <div class="sc-AbCdE"><span>Третий</span></div>
+    </article>
+
+    <script src="../extension/lib/common.js"></script>
+    <script src="../extension/presets/builtin.js"></script>
+    <script src="../extension/content.js"></script>
+    <script>
+      const T = window.__pageClip._test;
+      const results = [];
+      const check = (name, cond, detail = "") => results.push({ name, ok: !!cond, detail });
+      const eq = (name, actual, expected) =>
+        check(name, JSON.stringify(actual) === JSON.stringify(expected), `got ${JSON.stringify(actual)}, want ${JSON.stringify(expected)}`);
+      const $ = (s) => document.querySelector(s);
+      const preset = PageClip.BUILTIN.find((p) => p.id === "smclinic-visit");
+
+      // Preset blocks by selector.
+      const blocks = T.locateBlocks(preset.blocks);
+      eq("selector locators find 3 blocks", blocks.length, 3);
+      check("block 1 is the page heading", blocks[0] === $(".admission__headline h2"));
+      check("block 2 is the visit card", blocks[1] === $(".admission-info-wrapper"));
+      check("block 3 is the doctor card", blocks[2] === $(".doctor-info-wrapper"));
+
+      // Text-anchor fallback (selectors removed).
+      const textOnly = preset.blocks.filter((b) => b.anchorText).map(({ selector, ...rest }) => rest);
+      const anchored = T.locateBlocks(textOnly);
+      eq("anchor locators find 2 blocks", anchored.length, 2);
+      check("anchor: visit card climbs to .admission-info", anchored[0] === $(".admission-info"));
+      check("anchor: doctor card climbs to .doctor-info-wrapper", anchored[1] === $(".doctor-info-wrapper"));
+      eq(
+        "notContainsText stops the climb",
+        T.locateBlocks([{ anchorText: "Дата приёма", climbUntil: { containsText: ["Ваша карта"], notContainsText: ["Записать себя"] } }]).length,
+        0,
+      );
+      eq("nested and duplicate blocks collapse", T.locateBlocks([{ selector: ".doctor-info" }, { selector: ".doctor-info-wrapper" }, { selector: ".doctor-info-wrapper" }]).length, 1);
+
+      // Title fields.
+      eq("title from fields", T.buildTitle(preset), "Приём 2026-10-12 Дерматовенеролог Иванова Т.Г.");
+      eq("all fields unresolved → page title", T.buildTitle({ title: "{x} {y}", fields: {} }), "SM-Clinic | История посещений");
+      eq("date: weekday picks the year", T.formatDate("Понедельник, 12 октября, 15:06"), "2026-10-12");
+      eq("date: explicit year", T.formatDate("1 марта 2024"), "2024-03-01");
+      eq("date: May", T.formatDate("5 мая 2023, 10:00"), "2023-05-05");
+      eq("date: dotted", T.formatDate("12.03.2024"), "2024-03-12");
+      eq("date: unparseable kept", T.formatDate("вчера"), "вчера");
+      eq("initials", T.formatInitials("Иванова  Татьяна Геннадьевна"), "Иванова Т.Г.");
+
+      // Print marking and cleanup.
+      T.mark(blocks, preset.hide);
+      check("html gets data-pb-active", document.documentElement.hasAttribute("data-pb-active"));
+      check("blocks get data-pb-keep", blocks.every((b) => b.hasAttribute("data-pb-keep")));
+      check("ancestors get data-pb-path", $(".admission").hasAttribute("data-pb-path") && document.body.hasAttribute("data-pb-path"));
+      check("crumbs are neither kept nor on the path", !$(".sm-crumbs").matches("[data-pb-keep], [data-pb-path]"));
+      check("share button hidden", $(".doctor-recommendation__details button").closest("[data-pb-hide]"));
+      check("repeat button hidden", $(".transfer__btn").closest("[data-pb-hide]"));
+      const rec = $(".doctor-extra-text--list");
+      const recBefore = rec.textContent;
+      T.tidyPreformatted(blocks[2]);
+      check("tidy: trailing tabs and blank lines removed", !/[\t]\n|\n\s*$/.test(rec.textContent) && rec.textContent !== recBefore);
+      T.cleanup();
+      check("cleanup restores tidied text", rec.textContent === recBefore);
+      eq("cleanup removes every data-pb-* attribute", document.querySelectorAll("[data-pb-keep],[data-pb-path],[data-pb-hide],[data-pb-active],[data-pb-preline]").length, 0);
+
+      // Markdown for the preset.
+      T.mark(blocks, preset.hide);
+      const md = T.buildMarkdown(blocks, T.buildTitle(preset));
+      T.cleanup();
+      check("md: title is H1", md.startsWith("# Приём 2026-10-12 Дерматовенеролог Иванова Т.Г.\n"), md.slice(0, 80));
+      check("md: heading shifted to H2", md.includes("\n## Информация о приёме\n"));
+      check("md: date and clinic", md.includes("Понедельник, 12 октября, 15:06") && md.includes("ул. Васильевская, стр.3"));
+      check("md: pseudo-element separators", md.includes("АБ0000000 • 1 января 1980 (46 лет) • пол: Мужской"), md);
+      check("md: recommendations keep line breaks", /Режим амбулаторный  \n2\. Питьевой/.test(md), md);
+      check("md: markdown chars escaped", md.includes("по 1 \\*2 раза"));
+      for (const text of ["Поделиться", "Повторить", "К списку приёмов", "Обратите внимание", "Записать себя", "Главная страница"]) {
+        check(`md: no "${text}"`, !md.includes(text));
+      }
+      check("md: source footer", /\n---\n\n_Источник|_mdSource/.test(md));
+
+      // Markdown for generic content.
+      const article = $("#generic");
+      const gmd = T.buildMarkdown([article], "Статья");
+      check("md: H1 inside block shifted to H2", gmd.includes("\n## Заголовок статьи\n"));
+      check("md: inline formatting", gmd.includes("Текст со **жирным**, _курсивом_, `кодом` и [ссылкой](https://example.org/a%20b)."), gmd);
+      check("md: nested lists", gmd.includes("- Первый пункт\n- Второй пункт\n  1. Вложенный"), gmd);
+      check("md: table", gmd.includes("| Колонка | Значение |\n| --- | --- |\n| a\\|b | 2 |"), gmd);
+      check("md: pre block", gmd.includes("```\nline 1\n  line 2\n```"));
+
+      // Selector generator.
+      check("looksGenerated: hash classes", ["css-1x2y3z4", "sc-AbCdE", "button_x7Kp2", "w-[191px]", "a1b2c3d4"].every(T.looksGenerated));
+      check("looksGenerated: stable classes", !["admission-info-wrapper", "doctor-info", "card", "col-2", "h2"].some(T.looksGenerated));
+      const targets = [
+        ".admission-info-wrapper", ".doctor-info-wrapper", ".doctor-info-wrapper + .doctor-info-wrapper", ".passport-info .dots:last-child",
+        "[data-testid=info-card]", ".sc-AbCdE + .sc-AbCdE span", ".sc-AbCdE span:nth-child(2)", "#generic table",
+      ];
+      for (const s of targets) {
+        const el = $(s);
+        const sel = T.cssSelectorFor(el);
+        const found = document.querySelectorAll(sel);
+        check(`selector for ${s} → ${sel}`, found.length === 1 && found[0] === el);
+        check(`selector for ${s} has no hashed class`, !/css-1x2y3z4|sc-AbCdE/.test(sel));
+      }
+
+      // URL match patterns.
+      const m = PageClip.matchUrl;
+      check("match: host + path", m("https://app.smclinic.ru/*", "https://app.smclinic.ru/history/123"));
+      check("match: other host", !m("https://app.smclinic.ru/*", "https://smclinic.ru/"));
+      check("match: subdomain wildcard", m("*://*.example.org/*", "http://a.b.example.org/x?q=1") && m("*://*.example.org/*", "https://example.org/"));
+      check("match: scheme", !m("https://x.org/*", "http://x.org/"));
+      check("match: path glob", m("https://x.org/docs/*", "https://x.org/docs/a") && !m("https://x.org/docs/*", "https://x.org/blog"));
+      check("match: all_urls", m("<all_urls>", "file:///C:/a.html") && !m("<all_urls>", "chrome://extensions"));
+
+      // Preset validation.
+      check("builtin presets are valid", PageClip.BUILTIN.every((p) => PageClip.validatePreset(p)));
+      let threw = false;
+      try { PageClip.validatePreset({ id: "x", name: "x", match: ["*://*/*"], blocks: [{}] }); } catch { threw = true; }
+      check("invalid block locator rejected", threw);
+
+      const failed = results.filter((r) => !r.ok);
+      document.title = failed.length ? `FAIL ${failed.length}/${results.length}` : `PASS ${results.length}/${results.length}`;
+      const out = $("#results");
+      out.textContent = "";
+      for (const r of results) {
+        const line = document.createElement("div");
+        line.className = r.ok ? "pass" : "fail";
+        line.textContent = (r.ok ? "✔ " : "✘ ") + r.name + (r.ok ? "" : "  — " + r.detail);
+        out.append(line);
+      }
+      window.__testResults = { failed, md, gmd };
+    </script>
+  </body>
+</html>

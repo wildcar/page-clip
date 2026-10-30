@@ -1,0 +1,63 @@
+/* Print-only rules. Every rule is gated by html[data-pb-active], which content.js sets just
+   before window.print() and removes on afterprint, so normal printing is never affected. */
+@media print {
+  @page {
+    margin: 12mm;
+  }
+
+  html[data-pb-active] body *:not([data-pb-keep], [data-pb-path], [data-pb-keep] *) {
+    display: none !important;
+  }
+
+  html[data-pb-active],
+  html[data-pb-active] body,
+  html[data-pb-active] [data-pb-path] {
+    display: block !important;
+    position: static !important;
+    transform: none !important;
+    float: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: none !important;
+    box-shadow: none !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    columns: auto !important;
+    contain: none !important;
+  }
+
+  /* relative: absolutely positioned decorations stay inside their block. */
+  html[data-pb-active] [data-pb-keep] {
+    position: relative !important;
+    transform: none !important;
+    float: none !important;
+    box-shadow: none !important;
+    max-width: 100% !important;
+    margin: 0 0 6mm !important;
+    break-inside: avoid;
+  }
+
+  html[data-pb-active] [data-pb-keep],
+  html[data-pb-active] [data-pb-keep] * {
+    max-height: none !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Non-code text with pre / pre-wrap: keep line breaks, collapse runs of spaces and tabs. */
+  html[data-pb-active] [data-pb-preline] {
+    white-space: pre-line !important;
+  }
+
+  html[data-pb-active] [data-pb-keep] [data-pb-hide],
+  html[data-pb-active] [data-pb-hide] {
+    display: none !important;
+  }
+}

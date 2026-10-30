@@ -6,23 +6,28 @@ the live picture here; push detail into `AGENTS/SPEC.md` (the contract) and `AGE
 
 ## Goal
 
-MV3 extension that prints selected page blocks to PDF, with per-site presets
-(first: SM-Clinic "Информация о приёме"). Design: `docs/adr/Page Blocks to PDF — design.md`.
+MV3 extension that saves selected page blocks to PDF (print dialog) or Markdown, with per-site
+presets (first: SM-Clinic "Информация о приёме"). Design: `docs/adr/Page Blocks to PDF — design.md`.
 
 ## Now
 
-- Repository initialized: docs filled from the design, no extension code yet.
+- v0.1.0 implemented: popup, preset engine, picker, PDF, Markdown, options, SM-Clinic preset.
+- `test/harness.html` 70/70. Print layout, Markdown and picker checked on a local copy of the real
+  SM-Clinic page (`test/smclinic.local.html`, gitignored), with print.css applied on screen.
 
 ## Next
 
-- Scaffold `extension/`: manifest, popup, content.js (preset engine + print), print.css.
-- Built-in SM-Clinic preset; then manual picker; then options page.
+- User check in Yandex Browser as an installed extension: live SM-Clinic page (PDF file name,
+  real print preview), picker on an arbitrary site (Wikipedia), save preset → reload → run,
+  options export/import.
 
 ## Open questions
 
-- SM-Clinic DOM is unknown without login: the preset locators need tuning against a real page (outerHTML from DevTools).
+- Real print preview not seen yet (only screen emulation of print.css). Page breaks inside
+  long recommendation blocks may need tuning.
 
 ## Deferred
 
-- Build / lint / tests: no toolchain yet. Node.js is not installed on the dev host, so `node --check` is unavailable; decide on syntax check / ESLint when code appears.
+- Lint: Node.js is not installed on the dev host, so no `node --check` / ESLint; syntax is
+  checked by loading the files in a browser (harness + `new Function` over each file).
 - Later (from design): more presets, per-preset print options, keyboard shortcut, jsPDF direct-file mode.

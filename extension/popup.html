@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <img src="icons/icon32.png" alt="" width="20" height="20" />
+      <span>Page Clip</span>
+    </header>
+
+    <section id="presets">
+      <h2 data-i18n="popupPresetsTitle"></h2>
+      <ul id="preset-list"></ul>
+      <p id="no-presets" class="muted" data-i18n="popupNoPresets" hidden></p>
+    </section>
+
+    <button id="pick" class="wide" data-i18n="popupPick"></button>
+
+    <p id="status" role="status"></p>
+
+    <footer>
+      <a href="#" id="open-options" data-i18n="popupOptions"></a>
+    </footer>
+
+    <script src="lib/common.js"></script>
+    <script src="presets/builtin.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

@@ -158,6 +158,7 @@ Hard constraints and invariants this project must not violate. Fill in after the
 - No permanent host permissions: code is injected only on user click (`activeTab` + `scripting`).
 - `print.css` holds `@media print` rules only; the normal page view must never change.
 - After printing, every `data-pb-*` attribute is removed and the original `document.title` restored.
+- The repo is public: real page dumps (personal / medical data) never get committed. They match `docs/adr/*outerHTML*` or `*.local.html` (gitignored); test fixtures are anonymized by hand.
 
 ## Stack & Commands
 
@@ -167,14 +168,17 @@ Plain JavaScript, Chrome Manifest V3, no dependencies. Full cheat-sheet in `AGEN
 # install      — none
 # dev / run    — browser://extensions → Режим разработчика → Загрузить распакованное → extension/
 # build        — none; after edits press "Обновить" on the extension card
-# test         — manual, see Verification in docs/adr/Page Blocks to PDF — design.md
-# lint         — node --check <file>.js   (Node not installed yet, see STATE → Deferred)
+# test         — open test/harness.html in a browser → title "PASS n/n"
+#                (Claude preview pane: run tools/serve.ps1 -Root <repo>, open http://localhost:8765/test/harness.html)
+# lint         — syntax: load the files (harness does); Node is not installed, see STATE → Deferred
 ```
 
 ## Architecture
 
 ```
-extension/   unpacked MV3 extension: manifest, popup, content.js, print.css, options, presets/
+extension/   unpacked MV3 extension: manifest, popup, content.js, print.css, options, lib/, presets/, _locales/
+test/        harness.html — browser tests on an anonymized SM-Clinic fixture
+tools/       serve.ps1 — localhost static server for tests
 docs/adr/    design decisions
 AGENTS/      agent docs
 ```

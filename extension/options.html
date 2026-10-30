@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <title>Page Clip</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1 data-i18n="optionsTitle"></h1>
+        <div class="actions">
+          <button id="export" data-i18n="optionsExport"></button>
+          <label class="button">
+            <span data-i18n="optionsImport"></span>
+            <input id="import" type="file" accept="application/json,.json" hidden />
+          </label>
+        </div>
+      </header>
+
+      <p id="status" role="status"></p>
+
+      <section>
+        <h2 data-i18n="optionsUser"></h2>
+        <ul id="user-list" class="presets"></ul>
+        <p id="no-user" class="muted" data-i18n="optionsNoUser" hidden></p>
+      </section>
+
+      <section>
+        <h2 data-i18n="optionsBuiltin"></h2>
+        <ul id="builtin-list" class="presets"></ul>
+      </section>
+    </main>
+
+    <script src="lib/common.js"></script>
+    <script src="presets/builtin.js"></script>
+    <script src="options.js"></script>
+  </body>
+</html>
