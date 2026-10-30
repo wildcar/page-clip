@@ -4,6 +4,12 @@ Newest first. Each entry ≤5 lines using the format defined in `AGENTS.md`.
 
 ---
 
+## 2026-10-30 · SM-Clinic file name without doctor
+- What: preset title `Приём {date} {specialty}` (doctor name dropped)
+- Why: user feedback after the live check
+- Files: extension/presets/builtin.js, test/harness.html, AGENTS/SPEC.md, README.md
+- Next: reliable visit year (weekday guess is ambiguous)
+
 ## 2026-10-30 · Extension v0.1.0: presets, picker, PDF and Markdown
 - What: MV3 extension (popup, content.js engine + picker, print.css, options, i18n), SM-Clinic preset, Markdown export, browser test harness
 - Why: task in `docs/adr/Page Blocks to PDF — design.md`; Markdown export added on user request

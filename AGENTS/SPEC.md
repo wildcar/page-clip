@@ -46,7 +46,7 @@ presets/builtin.js ── read-only built-in presets
 5. ✅ PDF output contains only kept blocks, in document order, with site styles; the page view is unchanged after the dialog closes.
 6. ✅ Output file name comes from the preset `title` template; unresolved placeholders are dropped; if every placeholder is unresolved or there is no template, the page title is used.
 7. ✅ Options page: built-in presets (read-only, can be duplicated) and user presets; rename, edit as JSON, delete, export/import JSON (import merges by `id`).
-8. ✅ Built-in preset `smclinic-visit`: page heading, visit card (date, clinic, address, patient, status), doctor card (doctor, specialty, services, recommendations); hides "Повторить запись", "Поделиться", "К списку приёмов", breadcrumbs; title `Приём {date} {specialty} {doctor}` → `Приём 2026-10-12 Дерматовенеролог Иванова Т.Г.`.
+8. ✅ Built-in preset `smclinic-visit`: page heading, visit card (date, clinic, address, patient, status), doctor card (doctor, specialty, services, recommendations); hides "Повторить запись", "Поделиться", "К списку приёмов", breadcrumbs; title `Приём {date} {specialty}` → `Приём 2026-10-12 Дерматовенеролог`.
 
 ## Preset format
 

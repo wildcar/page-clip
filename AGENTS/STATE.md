@@ -15,16 +15,16 @@ presets (first: SM-Clinic "Информация о приёме"). Design: `docs
 - `test/harness.html` 70/70. Print layout, Markdown and picker checked on a local copy of the real
   SM-Clinic page (`test/smclinic.local.html`, gitignored), with print.css applied on screen.
 
+- User checked it on the live SM-Clinic page: works. File name now `Приём <date> <specialty>`.
+
 ## Next
 
-- User check in Yandex Browser as an installed extension: live SM-Clinic page (PDF file name,
-  real print preview), picker on an arbitrary site (Wikipedia), save preset → reload → run,
-  options export/import.
+- Reliable visit year for SM-Clinic (weekday guess picked 2024 for a 2019 visit).
 
 ## Open questions
 
-- Real print preview not seen yet (only screen emulation of print.css). Page breaks inside
-  long recommendation blocks may need tuning.
+- Where to get the visit year: the page has none; candidates are the visit API response
+  (DevTools → Network) or asking the user when the year is ambiguous. Waiting for the user.
 
 ## Deferred
 

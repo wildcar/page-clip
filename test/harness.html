@@ -195,7 +195,7 @@
       eq("nested and duplicate blocks collapse", T.locateBlocks([{ selector: ".doctor-info" }, { selector: ".doctor-info-wrapper" }, { selector: ".doctor-info-wrapper" }]).length, 1);
 
       // Title fields.
-      eq("title from fields", T.buildTitle(preset), "Приём 2026-10-12 Дерматовенеролог Иванова Т.Г.");
+      eq("title from fields", T.buildTitle(preset), "Приём 2026-10-12 Дерматовенеролог");
       eq("all fields unresolved → page title", T.buildTitle({ title: "{x} {y}", fields: {} }), "SM-Clinic | История посещений");
       eq("date: weekday picks the year", T.formatDate("Понедельник, 12 октября, 15:06"), "2026-10-12");
       eq("date: explicit year", T.formatDate("1 марта 2024"), "2024-03-01");
@@ -224,7 +224,7 @@
       T.mark(blocks, preset.hide);
       const md = T.buildMarkdown(blocks, T.buildTitle(preset));
       T.cleanup();
-      check("md: title is H1", md.startsWith("# Приём 2026-10-12 Дерматовенеролог Иванова Т.Г.\n"), md.slice(0, 80));
+      check("md: title is H1", md.startsWith("# Приём 2026-10-12 Дерматовенеролог\n"), md.slice(0, 80));
       check("md: heading shifted to H2", md.includes("\n## Информация о приёме\n"));
       check("md: date and clinic", md.includes("Понедельник, 12 октября, 15:06") && md.includes("ул. Васильевская, стр.3"));
       check("md: pseudo-element separators", md.includes("АБ0000000 • 1 января 1980 (46 лет) • пол: Мужской"), md);

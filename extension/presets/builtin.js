@@ -25,11 +25,10 @@ PageClip.BUILTIN = [
       { text: ["Повторить запись", "Поделиться", "К списку приёмов"] },
       { selector: ".sm-crumbs, .transfer, .doctor-recommendation__details, .go-back" },
     ],
-    title: "Приём {date} {specialty} {doctor}",
+    title: "Приём {date} {specialty}",
     fields: {
       date: { afterLabel: "Дата приёма", format: "date" },
       specialty: { selector: ".doctor-info .doctors-specialization" },
-      doctor: { selector: ".doctor-info .personal-info h2", format: "initials" },
     },
   },
 ];
