@@ -19,6 +19,15 @@
 
   "mdSource": { "message": "Источник" },
 
+  "yearTitle": { "message": "Год приёма" },
+  "yearPrompt": {
+    "message": "На странице нет года для даты «$DATE$». Выберите год, он запомнится для этого приёма.",
+    "placeholders": { "date": { "content": "$1" } }
+  },
+  "yearOther": { "message": "Другой" },
+  "yearNone": { "message": "Без года" },
+  "yearCancel": { "message": "Отмена" },
+
   "optionsTitle": { "message": "Page Clip — преднастройки" },
   "optionsBuiltin": { "message": "Встроенные" },
   "optionsUser": { "message": "Мои" },

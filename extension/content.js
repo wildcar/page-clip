@@ -125,31 +125,46 @@
   const pad = (n) => String(n).padStart(2, "0");
   const isoDate = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
-  // "Понедельник, 12 октября, 15:06" → "2026-10-12". Without a year: the latest year that is not
-  // in the future and, when a weekday is given, falls on that weekday.
-  function formatDate(value) {
+  const EARLIEST_YEAR = 2000;
+
+  // "Понедельник, 12 октября, 15:06" → { year: null, month: 9, day: 12, weekday: 1 };
+  // also "1 марта 2024", "12.03.2024", "2024-03-12". null when unparseable.
+  function parseDate(value) {
     const s = value.toLowerCase().replace(/ё/g, "е");
     let m = /(\d{4})-(\d{2})-(\d{2})/.exec(s);
-    if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+    if (m) return { year: +m[1], month: m[2] - 1, day: +m[3], weekday: -1 };
     m = /(\d{1,2})\.(\d{1,2})\.(\d{4})/.exec(s);
-    if (m) return `${m[3]}-${pad(m[2])}-${pad(m[1])}`;
+    if (m) return { year: +m[3], month: m[2] - 1, day: +m[1], weekday: -1 };
     m = /(\d{1,2})\s+([а-я]+)(?:\s+(\d{4}))?/.exec(s);
-    if (!m) return value;
-    const day = Number(m[1]);
+    if (!m) return null;
     // "март" precedes "ма" in MONTHS, so "марта" never reaches the May prefix.
     const month = MONTHS.findIndex((p) => m[2].startsWith(p));
-    if (month < 0) return value;
-    if (m[3]) return `${m[3]}-${pad(month + 1)}-${pad(day)}`;
-    const weekday = WEEKDAYS.findIndex((w) => s.includes(w));
+    if (month < 0) return null;
+    return { year: m[3] ? +m[3] : null, month, day: +m[1], weekday: WEEKDAYS.findIndex((w) => s.includes(w)) };
+  }
+
+  // Years (newest first) when the date is not in the future and, if a weekday is given, falls on it.
+  // A weekday repeats on the same date every 5–11 years, so there are usually several.
+  function candidateYears(date) {
     const now = new Date();
-    const thisYear = now.getFullYear();
-    for (let y = thisYear + 1; y >= thisYear - 30; y--) {
-      const d = new Date(y, month, day);
-      if (d.getMonth() !== month || d > now) continue;
-      if (weekday >= 0 && d.getDay() !== weekday) continue;
-      return isoDate(d);
+    const years = [];
+    for (let y = now.getFullYear(); y >= EARLIEST_YEAR; y--) {
+      const d = new Date(y, date.month, date.day);
+      if (d.getMonth() !== date.month || d > now) continue;
+      if (date.weekday >= 0 && d.getDay() !== date.weekday) continue;
+      years.push(y);
     }
-    return value;
+    return years;
+  }
+
+  const isoParts = (year, date) => `${year}-${pad(date.month + 1)}-${pad(date.day)}`;
+
+  // Synchronous best guess: an explicit year, else the newest candidate year.
+  function formatDate(value) {
+    const date = parseDate(value);
+    if (!date) return value;
+    const year = date.year ?? candidateYears(date)[0];
+    return year ? isoParts(year, date) : value;
   }
 
   // "Иванова Татьяна Геннадьевна" → "Иванова Т.Г."
@@ -161,7 +176,7 @@
 
   const FORMATS = { date: formatDate, initials: formatInitials };
 
-  function resolveField(field) {
+  function fieldText(field) {
     let el = null;
     if (field.selector) {
       el = querySafe(field.selector);
@@ -171,24 +186,127 @@
         if (el) break;
       }
     }
-    const value = clean(el?.textContent);
-    return value && FORMATS[field.format] ? FORMATS[field.format](value) : value;
+    return clean(el?.textContent);
   }
 
-  function buildTitle(preset) {
+  // Year chosen by the user for a date shown without one, remembered per site and date text.
+  const yearKey = (text) => `year:${location.host}:${norm(text)}`;
+
+  async function rememberedYear(text) {
+    try {
+      return (await chrome.storage.local.get(yearKey(text)))[yearKey(text)] ?? null;
+    } catch {
+      return null; // test page without extension APIs
+    }
+  }
+
+  async function rememberYear(text, year) {
+    try {
+      await chrome.storage.local.set({ [yearKey(text)]: year });
+    } catch {
+      /* test page without extension APIs */
+    }
+  }
+
+  class Cancelled extends Error {}
+
+  // Field value for the title. A "date" field with "askYear" and no year on the page asks the
+  // user (via `ask`) when several years fit; `ask` resolves to a year, 0 (no year) or null (cancel).
+  async function resolveField(field, ask) {
+    const text = fieldText(field);
+    if (!text || field.format !== "date") return text && FORMATS[field.format] ? FORMATS[field.format](text) : text;
+    const date = parseDate(text);
+    if (!date) return text;
+    if (date.year) return isoParts(date.year, date);
+    const years = candidateYears(date);
+    if (!field.askYear || years.length < 2) return years.length ? isoParts(years[0], date) : text;
+    let year = await rememberedYear(text);
+    if (year === null) {
+      year = await ask(text, years);
+      if (year === null) throw new Cancelled();
+      await rememberYear(text, year);
+    }
+    return year ? isoParts(year, date) : `${pad(date.month + 1)}-${pad(date.day)}`;
+  }
+
+  // Rejects with Cancelled when the user cancels a question.
+  async function buildTitle(preset, ask = askYear) {
     const fallback = clean(document.title) || location.hostname;
     if (!preset?.title) return fallback;
-    let total = 0;
-    let resolved = 0;
-    const title = preset.title.replace(/\{(\w+)\}/g, (_, key) => {
-      total++;
+    const values = {};
+    for (const key of new Set([...preset.title.matchAll(/\{(\w+)\}/g)].map((m) => m[1]))) {
       const field = preset.fields?.[key];
-      const value = field ? resolveField(field) : "";
-      if (value) resolved++;
-      return value;
+      values[key] = field ? await resolveField(field, ask) : "";
+    }
+    const keys = Object.keys(values);
+    const result = clean(preset.title.replace(/\{(\w+)\}/g, (_, key) => values[key]));
+    return !result || (keys.length && !keys.some((k) => values[k])) ? fallback : result;
+  }
+
+  // ---------- year question ----------
+
+  function askYear(dateText, years) {
+    return new Promise((resolve) => {
+      const host = document.createElement("div");
+      host.id = UI_ID;
+      const root = host.attachShadow({ mode: "open" });
+      root.innerHTML = `
+        <style>
+          :host { all: initial; }
+          .backdrop { position: fixed; inset: 0; z-index: 2147483647; background: rgba(0, 0, 0, 0.35);
+            display: flex; align-items: center; justify-content: center; padding: 16px;
+            font: 14px/1.4 system-ui, "Segoe UI", sans-serif; }
+          .box { background: #fff; color: #1f2328; border-radius: 10px; padding: 16px 18px; max-width: 420px;
+            width: 100%; box-sizing: border-box; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35); }
+          h2 { font-size: 16px; margin: 0 0 6px; }
+          p { margin: 0 0 12px; color: #424a53; }
+          .years, .row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+          button, input { font: inherit; padding: 6px 12px; border-radius: 6px; border: 1px solid #d0d7de;
+            background: #fff; color: inherit; }
+          button { cursor: pointer; }
+          button:hover { border-color: #1a73e8; }
+          .years button:first-child { background: #1a73e8; border-color: #1a73e8; color: #fff; }
+          input { width: 90px; }
+          .row:last-child { justify-content: flex-end; margin-bottom: 0; }
+        </style>
+        <div class="backdrop">
+          <div class="box" role="dialog" aria-modal="true">
+            <h2></h2>
+            <p></p>
+            <div class="years"></div>
+            <form class="row"><input type="number" min="${EARLIEST_YEAR}" max="${new Date().getFullYear()}" required /><button type="submit">OK</button></form>
+            <div class="row"><button data-act="none"></button><button data-act="cancel"></button></div>
+          </div>
+        </div>`;
+      root.querySelector("h2").textContent = t("yearTitle");
+      root.querySelector("p").textContent = t("yearPrompt", [dateText]);
+      root.querySelector("input").placeholder = t("yearOther");
+      root.querySelector("[data-act=none]").textContent = t("yearNone");
+      root.querySelector("[data-act=cancel]").textContent = t("yearCancel");
+      for (const y of years.slice(0, 4)) {
+        const b = document.createElement("button");
+        b.textContent = String(y);
+        b.addEventListener("click", () => done(y));
+        root.querySelector(".years").append(b);
+      }
+      root.querySelector("form").addEventListener("submit", (e) => {
+        e.preventDefault();
+        done(Number(root.querySelector("input").value));
+      });
+      root.querySelector("[data-act=none]").addEventListener("click", () => done(0));
+      root.querySelector("[data-act=cancel]").addEventListener("click", () => done(null));
+      const onKey = (e) => {
+        if (e.key === "Escape") done(null);
+      };
+      window.addEventListener("keydown", onKey, true);
+      function done(value) {
+        window.removeEventListener("keydown", onKey, true);
+        host.remove();
+        resolve(value);
+      }
+      document.documentElement.append(host);
+      root.querySelector(".years button")?.focus();
     });
-    const result = clean(title);
-    return !result || (total && !resolved) ? fallback : result;
   }
 
   const fileSafe = (s) => clean(s.replace(/[\\/:*?"<>|\u0000-\u001f]+/g, " ")).slice(0, 150) || "page";
@@ -743,10 +861,19 @@
     cleanup();
     const blocks = locateBlocks(preset?.blocks);
     if (!blocks.length) return { ok: false, error: t("errNoBlocks") };
-    const title = buildTitle(preset);
-    // Return to the popup first; window.print() blocks until the dialog closes.
-    setTimeout(() => exportBlocks(blocks, preset.hide, title, format), 50);
-    return { ok: true, found: blocks.length, title };
+    // Return to the popup first (it closes); the title may wait for the year question, and
+    // window.print() blocks until the dialog closes.
+    setTimeout(async () => {
+      let title;
+      try {
+        title = await buildTitle(preset);
+      } catch (e) {
+        if (e instanceof Cancelled) return;
+        throw e;
+      }
+      exportBlocks(blocks, preset.hide, title, format);
+    }, 50);
+    return { ok: true, found: blocks.length };
   }
 
   window.__pageClip = {
@@ -754,6 +881,6 @@
     startPicker,
     stopPicker,
     // Exposed for test/harness.html.
-    _test: { locateBlocks, buildTitle, buildMarkdown, saveMarkdown, mark, tidyPreformatted, cleanup, cssSelectorFor, formatDate, formatInitials, looksGenerated },
+    _test: { locateBlocks, buildTitle, buildMarkdown, saveMarkdown, mark, tidyPreformatted, cleanup, cssSelectorFor, formatDate, parseDate, candidateYears, askYear, formatInitials, looksGenerated },
   };
 })();

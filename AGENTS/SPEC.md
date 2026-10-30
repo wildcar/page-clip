@@ -46,7 +46,8 @@ presets/builtin.js ── read-only built-in presets
 5. ✅ PDF output contains only kept blocks, in document order, with site styles; the page view is unchanged after the dialog closes.
 6. ✅ Output file name comes from the preset `title` template; unresolved placeholders are dropped; if every placeholder is unresolved or there is no template, the page title is used.
 7. ✅ Options page: built-in presets (read-only, can be duplicated) and user presets; rename, edit as JSON, delete, export/import JSON (import merges by `id`).
-8. ✅ Built-in preset `smclinic-visit`: page heading, visit card (date, clinic, address, patient, status), doctor card (doctor, specialty, services, recommendations); hides "Повторить запись", "Поделиться", "К списку приёмов", breadcrumbs; title `Приём {date} {specialty}` → `Приём 2026-10-12 Дерматовенеролог`.
+8. ✅ Built-in preset `smclinic-visit`: page heading, visit card (date, clinic, address, patient, status), doctor card (doctor, specialty, services, recommendations); hides "Повторить запись", "Поделиться", "К списку приёмов", breadcrumbs; title `Приём {date} {specialty}` → `Приём 2026-10-12 Дерматовенеролог` (no doctor name).
+9. ✅ Visit year: the SM-Clinic visit page shows no year. When several years fit the weekday, a dialog on the page offers them (newest first, up to 4), a custom year, "Без года" (`MM-DD`) or "Отмена" (Esc; nothing is saved). The answer is remembered in `chrome.storage.local` (`year:<host>:<date text>`) and not asked again.
 
 ## Preset format
 
@@ -62,7 +63,7 @@ presets/builtin.js ── read-only built-in presets
   "hide": [ { "text": ["Поделиться"] }, { "selector": ".sm-crumbs" } ],
   "title": "Приём {date} {specialty} {doctor}",
   "fields": {
-    "date": { "afterLabel": "Дата приёма", "format": "date" },
+    "date": { "afterLabel": "Дата приёма", "format": "date", "askYear": true },
     "doctor": { "selector": ".doctor-info h2", "format": "initials" }
   }
 }
@@ -72,7 +73,7 @@ presets/builtin.js ── read-only built-in presets
 - Text comparison ignores case, collapses whitespace and treats `ё` as `е`.
 - Blocks are deduplicated, nested blocks are dropped in favour of the outer one, order follows the document.
 - `hide`: `{ "selector": "…" }` or `{ "text": [...] }` (exact text; the closest button/link is hidden).
-- Fields: `selector` (text of first match) or `afterLabel` (text of the first non-empty element after the label). `format`: `date` → `YYYY-MM-DD` (Russian dates; a missing year is the latest year not in the future whose weekday matches), `initials` → `Фамилия И.О.`.
+- Fields: `selector` (text of first match) or `afterLabel` (text of the first non-empty element after the label). `format`: `date` → `YYYY-MM-DD` (Russian dates; a missing year: candidates are years since 2000, not in the future, whose weekday matches; with `"askYear": true` and several candidates the user is asked, otherwise the newest is used), `initials` → `Фамилия И.О.`.
 - Picker-generated selectors prefer a stable `id`, then `data-*` / ARIA / `role` / `name` attributes, then stable class names, then `:nth-of-type`; hash-like ids, classes and values are skipped.
 
 ## Print technique
@@ -116,7 +117,7 @@ AGENTS/                 agent docs (spec, state, history, memory, env)
 
 ## Current state
 
-- ✅ Requirements 1–8 implemented. `test/harness.html`: 70/70. Print layout (print.css applied on screen), Markdown and picker checked on a local copy of the real SM-Clinic page.
+- ✅ Requirements 1–8 implemented. `test/harness.html`: 80/80. Print layout (print.css applied on screen), Markdown and picker checked on a local copy of the real SM-Clinic page.
 - ⏳ Check as an installed extension in Yandex Browser: live SM-Clinic page, an arbitrary site, options export/import.
 
 See `AGENTS/STATE.md` for the live Now / Next snapshot.

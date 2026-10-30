@@ -11,20 +11,21 @@ presets (first: SM-Clinic "Информация о приёме"). Design: `docs
 
 ## Now
 
-- v0.1.0 implemented: popup, preset engine, picker, PDF, Markdown, options, SM-Clinic preset.
-- `test/harness.html` 70/70. Print layout, Markdown and picker checked on a local copy of the real
-  SM-Clinic page (`test/smclinic.local.html`, gitignored), with print.css applied on screen.
-
-- User checked it on the live SM-Clinic page: works. File name now `Приём <date> <specialty>`.
+- v0.1 checked by the user on the live SM-Clinic page: works.
+- File name `Приём <date> <specialty>`; visit year asked in an on-page dialog when the weekday
+  fits several years, answer remembered per visit. `test/harness.html` 80/80.
 
 ## Next
 
-- Reliable visit year for SM-Clinic (weekday guess picked 2024 for a 2019 visit).
+- User check of the year dialog in Yandex Browser.
+- Optional: take the year automatically from the visit list (`/history`), see Open questions.
 
 ## Open questions
 
-- Where to get the visit year: the page has none; candidates are the visit API response
-  (DevTools → Network) or asking the user when the year is ambiguous. Waiting for the user.
+- Automatic year: the list page shows the year on each card (`.medical-info-card .date__year`),
+  but the visit page does not, and the list is gone after the SPA navigates. Capturing it needs a
+  content script on app.smclinic.ru (optional host permission + background worker), which
+  deviates from "inject on click only". Waiting for the user's decision.
 
 ## Deferred
 

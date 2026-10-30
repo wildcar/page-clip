@@ -27,7 +27,7 @@ PageClip.BUILTIN = [
     ],
     title: "Приём {date} {specialty}",
     fields: {
-      date: { afterLabel: "Дата приёма", format: "date" },
+      date: { afterLabel: "Дата приёма", format: "date", askYear: true },
       specialty: { selector: ".doctor-info .doctors-specialization" },
     },
   },

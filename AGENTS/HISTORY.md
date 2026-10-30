@@ -4,6 +4,12 @@ Newest first. Each entry ≤5 lines using the format defined in `AGENTS.md`.
 
 ---
 
+## 2026-10-30 · Ask the visit year instead of guessing
+- What: on-page year dialog for dates without a year (candidates by weekday, custom, none, cancel), answer remembered per visit; buildTitle is async
+- Why: weekday guess gave 2024 for a 2019 visit; the visit page has no year anywhere
+- Files: extension/content.js, extension/presets/builtin.js, extension/_locales/ru/messages.json, test/harness.html, AGENTS/SPEC.md
+- Next: decide on automatic year capture from the visit list page
+
 ## 2026-10-30 · SM-Clinic file name without doctor
 - What: preset title `Приём {date} {specialty}` (doctor name dropped)
 - Why: user feedback after the live check

@@ -166,6 +166,8 @@
     <script src="../extension/presets/builtin.js"></script>
     <script src="../extension/content.js"></script>
     <script>
+    // async: buildTitle may wait for the year question.
+    (async () => {
       const T = window.__pageClip._test;
       const results = [];
       const check = (name, cond, detail = "") => results.push({ name, ok: !!cond, detail });
@@ -195,8 +197,33 @@
       eq("nested and duplicate blocks collapse", T.locateBlocks([{ selector: ".doctor-info" }, { selector: ".doctor-info-wrapper" }, { selector: ".doctor-info-wrapper" }]).length, 1);
 
       // Title fields.
-      eq("title from fields", T.buildTitle(preset), "Приём 2026-10-12 Дерматовенеролог");
-      eq("all fields unresolved → page title", T.buildTitle({ title: "{x} {y}", fields: {} }), "SM-Clinic | История посещений");
+      // Fixture date "Понедельник, 12 октября": Monday in 2026, 2020, 2015, 2009.
+      let asked = null;
+      const answer = (year) => async (text, years) => ((asked = { text, years }), year);
+      eq("title: asked year is used", await T.buildTitle(preset, answer(2020)), "Приём 2020-10-12 Дерматовенеролог");
+      eq("title: question gets date text and candidates", asked, { text: "Понедельник, 12 октября, 15:06", years: [2026, 2020, 2015, 2009] });
+      eq("title: 'no year' keeps month and day", await T.buildTitle(preset, answer(0)), "Приём 10-12 Дерматовенеролог");
+      let cancelled = false;
+      try { await T.buildTitle(preset, answer(null)); } catch { cancelled = true; }
+      check("title: cancel aborts", cancelled);
+      const noAsk = { ...preset, fields: { ...preset.fields, date: { afterLabel: "Дата приёма", format: "date" } } };
+      eq("title: without askYear the newest year is used", await T.buildTitle(noAsk, answer(1999)), "Приём 2026-10-12 Дерматовенеролог");
+      eq("all fields unresolved → page title", await T.buildTitle({ title: "{x} {y}", fields: {} }), "SM-Clinic | История посещений");
+      eq("candidates: 1 April Monday", T.candidateYears(T.parseDate("Понедельник, 01 апреля, 18:14")).slice(0, 2), [2024, 2019]);
+      eq("candidates: explicit year parsed", T.parseDate("1 марта 2024").year, 2024);
+
+      // Year dialog: offers the candidates, returns the clicked year, removes itself.
+      const dialog = T.askYear("Понедельник, 01 апреля, 18:14", [2024, 2019, 2013, 2002]);
+      const ui = document.getElementById("pb-ui");
+      const yearButtons = [...ui.shadowRoot.querySelectorAll(".years button")].map((b) => b.textContent);
+      eq("dialog: year buttons", yearButtons, ["2024", "2019", "2013", "2002"]);
+      ui.shadowRoot.querySelectorAll(".years button")[1].click();
+      eq("dialog: clicked year returned", await dialog, 2019);
+      check("dialog: removed after answer", !document.getElementById("pb-ui"));
+      const dialog2 = T.askYear("x", [2024, 2019]);
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      eq("dialog: Esc cancels", await dialog2, null);
+
       eq("date: weekday picks the year", T.formatDate("Понедельник, 12 октября, 15:06"), "2026-10-12");
       eq("date: explicit year", T.formatDate("1 марта 2024"), "2024-03-01");
       eq("date: May", T.formatDate("5 мая 2023, 10:00"), "2023-05-05");
@@ -222,7 +249,7 @@
 
       // Markdown for the preset.
       T.mark(blocks, preset.hide);
-      const md = T.buildMarkdown(blocks, T.buildTitle(preset));
+      const md = T.buildMarkdown(blocks, await T.buildTitle(preset, answer(2026)));
       T.cleanup();
       check("md: title is H1", md.startsWith("# Приём 2026-10-12 Дерматовенеролог\n"), md.slice(0, 80));
       check("md: heading shifted to H2", md.includes("\n## Информация о приёме\n"));
@@ -285,6 +312,7 @@
         out.append(line);
       }
       window.__testResults = { failed, md, gmd };
+    })();
     </script>
   </body>
 </html>
