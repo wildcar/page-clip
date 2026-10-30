@@ -16,7 +16,11 @@ async function activeTab() {
 async function callInPage(tabId, method, args = []) {
   const target = { tabId };
   await chrome.scripting.insertCSS({ target, files: ["print.css"] });
-  await chrome.scripting.executeScript({ target, files: ["lib/common.js", "content.js"] });
+  // Attached PDFs: their bytes are caught in the page's own world (pagehook.js).
+  if (method === "runPreset" && args[0]?.attachments?.length) {
+    await chrome.scripting.executeScript({ target, world: "MAIN", files: ["pagehook.js"] });
+  }
+  await chrome.scripting.executeScript({ target, files: ["lib/common.js", "lib/pdftext.js", "content.js"] });
   const [{ result }] = await chrome.scripting.executeScript({
     target,
     func: (m, a) => window.__pageClip[m](...a),

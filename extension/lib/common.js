@@ -65,6 +65,12 @@ PageClip.validatePreset = function validatePreset(p) {
   if (p.hide !== undefined && !Array.isArray(p.hide)) fail("hide");
   if (p.title !== undefined && typeof p.title !== "string") fail("title");
   if (p.fields !== undefined && (typeof p.fields !== "object" || Array.isArray(p.fields))) fail("fields");
+  if (p.attachments !== undefined) {
+    if (!Array.isArray(p.attachments)) fail("attachments");
+    for (const a of p.attachments) {
+      if (!a || (typeof a.clickText !== "string" && typeof a.clickSelector !== "string")) fail("attachments[].clickText|clickSelector");
+    }
+  }
   return p;
 };
 

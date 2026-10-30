@@ -4,6 +4,12 @@ Newest first. Each entry ≤5 lines using the format defined in `AGENTS.md`.
 
 ---
 
+## 2026-10-31 · Study page preset with the results PDF text
+- What: preset `smclinic-study`; preset key `attachments`: click the site's file control, catch the PDF in the page world (`pagehook.js`), extract text (`lib/pdftext.js`, no deps), insert it into the export
+- Why: user request: results are only a PDF download with plain text
+- Files: extension/pagehook.js, extension/lib/pdftext.js, extension/content.js, extension/popup.js, extension/presets/builtin.js, extension/lib/common.js, extension/_locales/ru/messages.json, test/harness.html, AGENTS/SPEC.md
+- Next: user check on the live page; study year source
+
 ## 2026-10-30 · Visit year shown in the saved date
 - What: date field option `insertYear`; a year from the API or the user is inserted after the month in the page text during export, restored afterwards
 - Why: user request: "Понедельник, 01 апреля 2019, 18:14" in the PDF

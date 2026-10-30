@@ -28,6 +28,7 @@ toolbar button → popup.html/js ── matches presets to tab URL
                      │  (activeTab, on click only), then calls window.__pageClip.*
                      ▼
                content.js + print.css (in the page, extension isolated world)
+               (+ lib/pdftext.js; pagehook.js in the page world for presets with attachments)
                  ├─ preset engine: locate blocks, hide rules, title fields
                  ├─ picker: hover/click selection, floating toolbar in a shadow root
                  ├─ pdf: data-pb-* marks → window.print() → cleanup on afterprint
@@ -48,6 +49,7 @@ presets/builtin.js ── read-only built-in presets
 7. ✅ Options page: built-in presets (read-only, can be duplicated) and user presets; rename, edit as JSON, delete, export/import JSON (import merges by `id`).
 8. ✅ Built-in preset `smclinic-visit`: page heading, visit card (date, clinic, address, patient, status), doctor card (doctor, specialty, services, recommendations); hides "Повторить запись", "Поделиться", "К списку приёмов", breadcrumbs; title `Приём {date} {specialty}` → `Приём 2026-10-12 Дерматовенеролог` (no doctor name).
 9. ✅ Visit year: the SM-Clinic visit page shows no year. It is taken from `visit.dateTime` of the visit JSON the page itself loaded (`/api/visits/<uuid>`), accepted only when day, month and time match the page. Otherwise, when several years fit the weekday, a dialog on the page offers them (newest first, up to 4), a custom year, "Без года" (`MM-DD`) or "Отмена" (Esc; nothing is saved). The answer is remembered in `chrome.storage.local` (`year:<host>:<date text>`) and not asked again. A year from the API or the user is also written into the date text of the saved PDF / Markdown ("01 апреля 2019, 18:14"); the page text is restored afterwards.
+10. ✅ Built-in preset `smclinic-study` ("Информация об исследовании"): heading, study card (date, clinic, patient, referring doctor), assigned studies; title `Исследование {date} {exam}` (year asked, no API known yet). The page offers the results only as a PDF download ("Посмотреть результаты обследования"); its text is inserted in place of the file link in the PDF / Markdown output, paragraphs kept and page-width wraps joined. If the file can't be read, a note says why.
 
 ## Preset format
 
@@ -78,6 +80,7 @@ presets/builtin.js ── read-only built-in presets
 - Field `api` (`{ url: <regex>, path: "a.b.c" }`): value from JSON the page already loaded. Same-origin resource URLs from `performance.getEntriesByType("resource")` matching `url` are re-requested, newest first, at most 3 (cookies; on 401/403 retried with JWT-looking tokens from the page's local/session storage, same origin only). Only the value at `path` is read. For a `date` field it supplies the missing year and must match the page's day, month and time; for other fields it is used when the page text is empty.
 - Year resolution order for a date without a year: `api` → remembered answer → question (`askYear`) → newest candidate.
 - `insertYear: true` on a date field: a year from `api` or from the user (not a guess, not "no year") is inserted after the month in the field element's text while exporting; cleanup restores it.
+- `attachments`: `[{ "clickText": "…" | "clickSelector": "…", "container": "…" }]`. Every control found is clicked in turn (a plain `<a href>` is fetched directly); the PDF the page loads in answer is caught in the page world (`pagehook.js`: fetch / XHR responses, Blobs given to `URL.createObjectURL`, base64 PDFs inside JSON; the download or new tab it would open is swallowed), converted to text (`lib/pdftext.js`) and inserted after the control's closest `container` while exporting (`data-pb-added`, removed by cleanup). Timeout 20 s.
 - Picker-generated selectors prefer a stable `id`, then `data-*` / ARIA / `role` / `name` attributes, then stable class names, then `:nth-of-type`; hash-like ids, classes and values are skipped.
 
 ## Print technique
@@ -87,6 +90,12 @@ presets/builtin.js ── read-only built-in presets
 3. Kept blocks get `position: relative` (absolutely positioned badges stay inside), `break-inside: avoid`; inside them `max-height:none; overflow:visible`, `print-color-adjust: exact`; `@page { margin: 12mm }`.
 4. Non-code text with `white-space: pre*` gets `data-pb-preline` (printed as `pre-line`); its text nodes lose trailing whitespace and runs of blank lines (user-entered notes on SM-Clinic carry dozens of tabs). Original text is restored on cleanup.
 5. Set `document.title`, `window.print()`, on `afterprint` restore title and text, strip all `data-pb-*`.
+
+## PDF text (lib/pdftext.js)
+
+- No dependencies: objects are scanned in file order (stream data skipped), object streams unpacked, FlateDecode via `DecompressionStream`; other filters (images) ignored. Text from `Tj`, `TJ`, `'`, `"` with text / CTM matrices and Form XObjects; Unicode from ToUnicode CMaps (bfchar, bfrange), WinAnsi + `Differences` for simple fonts; widths from `/W` or `/Widths`.
+- Lines: runs at the same baseline; a gap over 0.2 em adds a space. Paragraph: vertical gap over 1.5× the median line step. A line is joined to the previous one when its first word would not have fitted within the right text edge (edge used only if ≥3 lines reach it) and it does not start with a capital letter.
+- Scanned PDFs (no text layer) give an empty result.
 
 ## Markdown conversion
 
@@ -105,6 +114,8 @@ extension/              unpacked extension root (load this folder)
   presets/builtin.js    built-in presets
   popup.html/css/js     preset list for the current tab, injection
   content.js            preset engine, picker, PDF and Markdown export
+  pagehook.js           page-world hook: catches attached PDFs the page loads
+  lib/pdftext.js        PDF → plain text (Flate, ToUnicode, simple fonts; wrapped lines joined)
   print.css             @media print rules only
   options.html/css/js   preset management, JSON export/import
   icons/                toolbar icons
@@ -121,7 +132,7 @@ AGENTS/                 agent docs (spec, state, history, memory, env)
 
 ## Current state
 
-- ✅ Requirements 1–9 implemented. `test/harness.html`: 91/91. Print layout (print.css applied on screen), Markdown and picker checked on a local copy of the real SM-Clinic page.
+- ✅ Requirements 1–10 implemented. `test/harness.html`: 104/104 (incl. a generated test PDF and the capture hook). Print layout (print.css applied on screen), Markdown and picker checked on a local copy of the real SM-Clinic page.
 - ⏳ Check as an installed extension in Yandex Browser: live SM-Clinic page, an arbitrary site, options export/import.
 
 See `AGENTS/STATE.md` for the live Now / Next snapshot.

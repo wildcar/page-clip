@@ -47,6 +47,10 @@
   "optionsSaved": { "message": "Сохранено" },
   "optionsBadJson": { "message": "Не удалось прочитать JSON: $ERROR$", "placeholders": { "error": { "content": "$1" } } },
 
+  "pdfLoading": { "message": "Получаю текст PDF…" },
+  "pdfFailed": { "message": "Текст PDF не получен: $ERROR$", "placeholders": { "error": { "content": "$1" } } },
+  "pdfNoText": { "message": "в файле нет текстового слоя (скан?)" },
+  "pdfTimeout": { "message": "сайт не отдал файл за $SECONDS$ с", "placeholders": { "seconds": { "content": "$1" } } },
   "errNoBlocks": { "message": "На странице не найдено ни одного блока из преднастройки." },
   "errCannotInject": { "message": "На этой странице расширение работать не может (служебная страница браузера или магазин расширений)." },
   "errUnknown": { "message": "Что-то пошло не так." },

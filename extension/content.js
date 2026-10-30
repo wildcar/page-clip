@@ -1,6 +1,7 @@
 // Injected on demand by the popup (after lib/common.js). Exposes window.__pageClip with:
 //   runPreset(preset, format)  — locate blocks and export them ("pdf" | "md")
 //   startPicker()              — manual block selection with a floating toolbar
+// Needs lib/pdftext.js for presets with "attachments" (and pagehook.js in the page world).
 // Everything it adds to the page uses the data-pb-* attributes and is removed afterwards.
 (() => {
   if (window.__pageClip) return;
@@ -13,6 +14,8 @@
     hide: "data-pb-hide",
     active: "data-pb-active",
     preline: "data-pb-preline",
+    added: "data-pb-added",
+    capture: "data-pb-capture",
     hover: "data-pb-hover",
     picked: "data-pb-picked",
   };
@@ -412,6 +415,104 @@
     });
   }
 
+  // ---------- attached PDFs ----------
+
+  const CAPTURE_TIMEOUT = 20000;
+  let captureSeq = 0;
+
+  // Clicks the site's own "open the file" control and waits for the PDF bytes that
+  // pagehook.js (page world) catches on the way, instead of the download the click would start.
+  // A plain link to the file is read directly.
+  async function capturePdf(control) {
+    const link = control.closest("a[href]");
+    if (link && !link.href.startsWith("javascript:")) {
+      const res = await fetch(link.href, { credentials: "include" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.arrayBuffer();
+    }
+    const id = String(++captureSeq);
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => finish(null, new Error(t("pdfTimeout", [String(CAPTURE_TIMEOUT / 1000)]))), CAPTURE_TIMEOUT);
+      const onMessage = (e) => {
+        if (e.source === window && e.data?.pageClip === "pdf" && e.data.id === id) finish(e.data.buffer);
+      };
+      function finish(buffer, error) {
+        clearTimeout(timer);
+        window.removeEventListener("message", onMessage);
+        document.documentElement.removeAttribute(ATTR.capture);
+        if (error) reject(error);
+        else resolve(buffer);
+      }
+      window.addEventListener("message", onMessage);
+      document.documentElement.setAttribute(ATTR.capture, id);
+      control.click();
+    });
+  }
+
+  // Inserted after the file's container while exporting: one paragraph per PDF paragraph,
+  // its hard line breaks kept. cleanup() removes it.
+  function attachmentNode(text, error) {
+    const box = document.createElement("div");
+    box.setAttribute(ATTR.added, "");
+    if (error) {
+      const p = document.createElement("p");
+      const em = document.createElement("em");
+      em.textContent = t("pdfFailed", [error]);
+      p.append(em);
+      box.append(p);
+    }
+    for (const para of text ? text.split(/\n{2,}/) : []) {
+      const p = document.createElement("p");
+      para.split("\n").forEach((line, i) => p.append(...(i ? [document.createElement("br")] : []), line));
+      box.append(p);
+    }
+    return box;
+  }
+
+  // Preset "attachments": [{ clickText | clickSelector, container }] — every control found is
+  // clicked in turn and the text of its PDF goes after its closest `container` (or itself).
+  async function attachmentNodes(preset) {
+    const out = [];
+    const atts = preset?.attachments || [];
+    if (!atts.length) return out;
+    const hideToast = showToast(t("pdfLoading"));
+    try {
+      for (const att of atts) {
+        const controls = att.clickSelector ? querySafe(att.clickSelector, true) : elementsWithText(att.clickText || "");
+        for (const control of controls) {
+          let text = "";
+          let error = null;
+          try {
+            text = await PageClip.pdfText(await capturePdf(control));
+            if (!text) error = t("pdfNoText");
+          } catch (e) {
+            error = String(e.message || e);
+          }
+          const after = (att.container && control.closest(att.container)) || control;
+          out.push({ after, node: attachmentNode(text, error) });
+        }
+      }
+    } finally {
+      hideToast();
+    }
+    return out;
+  }
+
+  function showToast(text) {
+    const host = document.createElement("div");
+    host.id = UI_ID;
+    const root = host.attachShadow({ mode: "open" });
+    root.innerHTML = `<style>
+        :host { all: initial; }
+        div { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 2147483647;
+          padding: 8px 14px; border-radius: 8px; background: #1f2125; color: #e6edf3;
+          font: 13px/1.3 system-ui, "Segoe UI", sans-serif; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35); }
+      </style><div></div>`;
+    root.querySelector("div").textContent = text;
+    document.documentElement.append(host);
+    return () => host.remove();
+  }
+
   const fileSafe = (s) => clean(s.replace(/[\\/:*?"<>|\u0000-\u001f]+/g, " ")).slice(0, 150) || "page";
 
   // ---------- marking & export ----------
@@ -442,24 +543,27 @@
   function cleanup() {
     for (const [node, value] of changedText) node.nodeValue = value;
     changedText.clear();
+    for (const el of document.querySelectorAll(`[${ATTR.added}]`)) el.remove();
     for (const name of [ATTR.keep, ATTR.path, ATTR.hide, ATTR.active, ATTR.preline]) {
       for (const el of document.querySelectorAll(`[${name}]`)) el.removeAttribute(name);
     }
   }
 
-  function mark(blocks, hideRules, inserts = []) {
+  // `edits`: { years: [{ el, year }] from buildTitle, nodes: [{ after, node }] from attachmentNodes }.
+  function mark(blocks, hideRules, edits = {}) {
     cleanup();
     for (const block of blocks) {
       block.setAttribute(ATTR.keep, "");
       for (let p = block.parentElement; p; p = p.parentElement) p.setAttribute(ATTR.path, "");
     }
     applyHide(hideRules);
-    for (const { el, year } of inserts) if (el?.isConnected) insertYearInto(el, year);
+    for (const { el, year } of edits.years || []) if (el?.isConnected) insertYearInto(el, year);
+    for (const { after, node } of edits.nodes || []) if (after?.isConnected) after.after(node);
     document.documentElement.setAttribute(ATTR.active, "");
   }
 
-  function printBlocks(blocks, hideRules, title, inserts) {
-    mark(blocks, hideRules, inserts);
+  function printBlocks(blocks, hideRules, title, edits) {
+    mark(blocks, hideRules, edits);
     blocks.forEach(tidyPreformatted);
     const originalTitle = document.title;
     let restored = false;
@@ -487,8 +591,8 @@
     setTimeout(() => URL.revokeObjectURL(url), 10000);
   }
 
-  function saveMarkdown(blocks, hideRules, title, inserts) {
-    mark(blocks, hideRules, inserts);
+  function saveMarkdown(blocks, hideRules, title, edits) {
+    mark(blocks, hideRules, edits);
     let md;
     try {
       md = buildMarkdown(blocks, title);
@@ -499,9 +603,9 @@
     return md;
   }
 
-  function exportBlocks(blocks, hideRules, title, format, inserts = []) {
-    if (format === "md") saveMarkdown(blocks, hideRules, title, inserts);
-    else printBlocks(blocks, hideRules, title, inserts);
+  function exportBlocks(blocks, hideRules, title, format, edits = {}) {
+    if (format === "md") saveMarkdown(blocks, hideRules, title, edits);
+    else printBlocks(blocks, hideRules, title, edits);
   }
 
   // ---------- DOM → Markdown ----------
@@ -966,18 +1070,19 @@
     cleanup();
     const blocks = locateBlocks(preset?.blocks);
     if (!blocks.length) return { ok: false, error: t("errNoBlocks") };
-    // Return to the popup first (it closes); the title may wait for the year question, and
-    // window.print() blocks until the dialog closes.
+    // Return to the popup first (it closes); the title may wait for the year question, attached
+    // PDFs take a moment to load, and window.print() blocks until the dialog closes.
     setTimeout(async () => {
       let title;
-      const inserts = [];
+      const edits = { years: [], nodes: [] };
       try {
-        title = await buildTitle(preset, askYear, inserts);
+        title = await buildTitle(preset, askYear, edits.years);
       } catch (e) {
         if (e instanceof Cancelled) return;
         throw e;
       }
-      exportBlocks(blocks, preset.hide, title, format, inserts);
+      edits.nodes = await attachmentNodes(preset);
+      exportBlocks(blocks, preset.hide, title, format, edits);
     }, 50);
     return { ok: true, found: blocks.length };
   }
@@ -987,6 +1092,6 @@
     startPicker,
     stopPicker,
     // Exposed for test/harness.html.
-    _test: { locateBlocks, buildTitle, buildMarkdown, saveMarkdown, mark, tidyPreformatted, cleanup, cssSelectorFor, formatDate, parseDate, candidateYears, askYear, apiEnv, insertYearInto, formatInitials, looksGenerated },
+    _test: { locateBlocks, buildTitle, buildMarkdown, saveMarkdown, mark, tidyPreformatted, cleanup, cssSelectorFor, formatDate, parseDate, candidateYears, askYear, apiEnv, insertYearInto, formatInitials, looksGenerated, attachmentNodes },
   };
 })();

@@ -39,4 +39,31 @@ PageClip.BUILTIN = [
       specialty: { selector: ".doctor-info .doctors-specialization" },
     },
   },
+  {
+    id: "smclinic-study",
+    name: "Информация об исследовании",
+    match: ["https://app.smclinic.ru/*"],
+    blocks: [
+      { selector: ".diagnostic__headline h2" },
+      {
+        selector: ".analysis-info",
+        anchorText: "Дата проведения исследования",
+        climbUntil: { containsText: ["Пациент"] },
+      },
+      {
+        selector: ".analysis-examination",
+        anchorText: "Назначенные обследования",
+        climbUntil: { containsText: ["Результаты обследования"] },
+      },
+    ],
+    // The file link is replaced by the text of the file (attachments).
+    hide: [{ selector: ".sm-crumbs, .go-back, .result-wrapper" }],
+    title: "Исследование {date} {exam}",
+    fields: {
+      date: { afterLabel: "Дата проведения исследования", format: "date", askYear: true, insertYear: true },
+      exam: { selector: ".analysis-examination__text" },
+    },
+    // "Посмотреть результаты обследования" downloads a text PDF; its text goes into the export.
+    attachments: [{ clickText: "Посмотреть результаты обследования", container: ".result-wrapper" }],
+  },
 ];

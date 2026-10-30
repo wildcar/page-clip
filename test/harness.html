@@ -162,7 +162,47 @@
       <div class="sc-AbCdE"><span>Третий</span></div>
     </article>
 
+    <!-- SM-Clinic study page (anonymized, trimmed). -->
+    <section class="diagnostic">
+      <ul class="sm-crumbs"><li><a href="/">Главная страница</a></li><li><span>Информация об исследовании</span></li></ul>
+      <div class="diagnostic__headline"><h2>Информация об исследовании</h2></div>
+      <div class="analysis-info">
+        <div class="analysis-main">
+          <div class="analysis-info">
+            <div class="analysis-info__date">
+              <p class="analysis-info__title"> Дата проведения исследования </p>
+              <h2>Среда, 23 сентября, 16:43</h2>
+              <h3>«СМ-Клиника» на Тестовой улице</h3>
+            </div>
+            <div class="analysis-info__other">
+              <div class="patient-info"><p class="patient-info__title">Пациент</p><h3 class="patient-info__name">Петров Пётр Петрович</h3></div>
+              <div class="patient-info"><p class="patient-info__title">Назначивший врач</p><h3 class="patient-info__name">Сидорова Анна Ивановна</h3></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="analysis-examination">
+        <p class="analysis-examination__title">Назначенные обследования</p>
+        <p class="analysis-examination__text">УЗДС вен нижних конечностей</p>
+        <p class="analysis-examination__title"> Результаты обследования </p>
+        <div class="analysis-examination__body">
+          <div class="result-wrapper">
+            <div class="result-info"><p>Результаты обследования.pdf</p><p class="result-link green-text"> Посмотреть результаты обследования </p></div>
+          </div>
+        </div>
+      </div>
+      <p class="go-back"> К списку исследований </p>
+    </section>
+
+    <script>
+      // Stand-ins for a real download and a new tab; pagehook.js wraps them (test page = page world).
+      window.__spy = { clicks: 0, opens: 0 };
+      HTMLAnchorElement.prototype.click = function () { window.__spy.clicks++; };
+      window.open = function () { window.__spy.opens++; return null; };
+    </script>
+    <script src="../extension/pagehook.js"></script>
     <script src="../extension/lib/common.js"></script>
+    <script src="../extension/lib/pdftext.js"></script>
     <script src="../extension/presets/builtin.js"></script>
     <script src="../extension/content.js"></script>
     <script>
@@ -231,7 +271,7 @@
       const inserts = [];
       await T.buildTitle(preset, answer(1999), inserts);
       eq("insert: queued for the date element", inserts.map((i) => [i.el === dateEl, i.year]), [[true, 2020]]);
-      T.mark(blocks, preset.hide, inserts);
+      T.mark(blocks, preset.hide, { years: inserts });
       eq("insert: year after the month", dateEl.textContent, "Понедельник, 12 октября 2020, 15:06");
       const insMd = T.buildMarkdown(blocks, "x");
       T.cleanup();
@@ -329,6 +369,102 @@
         check(`selector for ${s} → ${sel}`, found.length === 1 && found[0] === el);
         check(`selector for ${s} has no hashed class`, !/css-1x2y3z4|sc-AbCdE/.test(sel));
       }
+
+      // PDF text. Test file: composite font with ToUnicode (Cyrillic), a WinAnsi font ("@" lines),
+      // TJ kerning (arrays), a blank line (""), page 1 compressed, page 2 plain.
+      async function makePdf(pages) {
+        const chars = [...new Set(pages.flat(2).filter((x) => typeof x === "string").join(""))];
+        const cid = new Map(chars.map((c, i) => [c, i + 1]));
+        const hex4 = (n) => n.toString(16).padStart(4, "0");
+        const hexStr = (s) => "<" + [...s].map((c) => hex4(cid.get(c))).join("") + ">";
+        const show = (line) =>
+          Array.isArray(line) ? `[${line.map((x) => (typeof x === "number" ? x : hexStr(x))).join(" ")}] TJ T*`
+          : line === "" ? "T*"
+          : line.startsWith("@") ? `/F2 12 Tf (${line.slice(1)}) Tj /F1 12 Tf T*`
+          : `${hexStr(line)} Tj T*`;
+        const binary = (bytes) => String.fromCharCode(...bytes);
+        const deflate = async (s) =>
+          binary(new Uint8Array(await new Response(new Blob([Uint8Array.from(s, (c) => c.charCodeAt(0))]).stream().pipeThrough(new CompressionStream("deflate"))).arrayBuffer()));
+        const stream = (data, filter = "") => `<< /Length ${data.length}${filter} >>\nstream\n${data}\nendstream`;
+        const cmap = `begincmap\n1 begincodespacerange <0000> <FFFF> endcodespacerange\n${chars.length} beginbfchar\n` +
+          chars.map((c) => `<${hex4(cid.get(c))}> <${hex4(c.charCodeAt(0))}>`).join("\n") + "\nendbfchar\nendcmap";
+        const objs = [
+          "<< /Type /Catalog /Pages 2 0 R >>",
+          `<< /Type /Pages /Kids [${pages.map((_, i) => `${7 + i * 2} 0 R`).join(" ")}] /Count ${pages.length} >>`,
+          "<< /Type /Font /Subtype /Type0 /BaseFont /Test /Encoding /Identity-H /DescendantFonts [4 0 R] /ToUnicode 5 0 R >>",
+          "<< /Type /Font /Subtype /CIDFontType2 /BaseFont /Test /DW 500 /W [1 [500 500]] >>",
+          stream(cmap),
+          `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding /FirstChar 32 /LastChar 126 /Widths [${Array(95).fill(500).join(" ")}] >>`,
+        ];
+        for (const [i, lines] of pages.entries()) {
+          const content = `BT /F1 12 Tf 14 TL 50 800 Td\n${lines.map(show).join("\n")}\nET`;
+          objs.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 6 0 R >> >> /Contents ${8 + i * 2} 0 R >>`);
+          objs.push(i === 0 ? stream(await deflate(content), " /Filter /FlateDecode") : stream(content));
+        }
+        const body = "%PDF-1.5\n%\xE2\xE3\xCF\xD3\n" + objs.map((o, i) => `${i + 1} 0 obj\n${o}\nendobj\n`).join("") + "trailer\n<< /Root 1 0 R >>\n%%EOF\n";
+        return Uint8Array.from(body, (c) => c.charCodeAt(0));
+      }
+      const pdfBytes = await makePdf([
+        [
+          "Заключение",
+          "первая строка текста длинная",
+          "продолжение абзаца тоже длинное",
+          "и ещё одна длинная строка тут",
+          "конец",
+          "",
+          ["Норма", -600, "есть"],
+          "@Device S-1000",
+          "строка в конце первой страницы",
+        ],
+        ["продолжается на второй"],
+      ]);
+      const pdfExpected =
+        "Заключение\nпервая строка текста длинная продолжение абзаца тоже длинное и ещё одна длинная строка тут конец" +
+        "\n\nНорма есть\nDevice S-1000\nстрока в конце первой страницы продолжается на второй";
+      eq("pdf: text, wraps joined, paragraphs kept", await PageClip.pdfText(pdfBytes.buffer), pdfExpected);
+      eq("pdf: not a PDF → empty", await PageClip.pdfText(new TextEncoder().encode("<html></html>").buffer), "");
+
+      // Study preset: the site's "view results" control is clicked; pagehook.js catches the PDF.
+      const study = PageClip.BUILTIN.find((p) => p.id === "smclinic-study");
+      const studyBlocks = T.locateBlocks(study.blocks);
+      eq("study: 3 blocks", studyBlocks.map((b) => b.className || b.tagName), ["H2", "analysis-info", "analysis-examination"]);
+      eq("study: title", await T.buildTitle(study, answer(2020)), "Исследование 2020-09-23 УЗДС вен нижних конечностей");
+      const b64 = btoa(String.fromCharCode(...pdfBytes));
+      let siteMode = "blob";
+      $(".result-link").addEventListener("click", async () => {
+        if (siteMode === "blob") {
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(new Blob([pdfBytes], { type: "application/pdf" }));
+          a.download = "Результаты обследования.pdf";
+          a.click();
+        } else if (siteMode === "fetch") {
+          const blob = await (await fetch("data:application/pdf;base64," + b64)).blob();
+          window.open(URL.createObjectURL(blob));
+        } else {
+          await (await fetch("data:application/json," + encodeURIComponent(JSON.stringify({ data: { name: "x.pdf", file: b64 } })))).json();
+        }
+      });
+      const studyMd = async () => {
+        const nodes = await T.attachmentNodes(study);
+        T.mark(studyBlocks, study.hide, { nodes });
+        const md = T.buildMarkdown(studyBlocks, "x");
+        const node = nodes[0]?.node;
+        const placed = node?.previousElementSibling === $(".result-wrapper") && node.hasAttribute("data-pb-keep") === false && !!node.closest("[data-pb-keep]");
+        T.cleanup();
+        return { md, placed, gone: !node?.isConnected };
+      };
+      const viaBlob = await studyMd();
+      check("study: PDF text after the hidden file link", viaBlob.placed);
+      check("study: PDF text in Markdown", viaBlob.md.includes("Заключение  \nпервая строка текста длинная продолжение") && viaBlob.md.includes("Норма есть  \nDevice S-1000"), viaBlob.md);
+      check("study: file link not in Markdown", !viaBlob.md.includes("Посмотреть результаты"));
+      check("study: inserted text removed on cleanup", viaBlob.gone);
+      eq("hook: download swallowed", window.__spy.clicks, 0);
+      siteMode = "fetch";
+      check("hook: PDF from a fetch response", (await studyMd()).md.includes("Норма есть"));
+      eq("hook: new tab swallowed", window.__spy.opens, 0);
+      siteMode = "json";
+      check("hook: base64 PDF inside JSON", (await studyMd()).md.includes("Норма есть"));
+      check("hook: capture flag removed", !document.documentElement.hasAttribute("data-pb-capture"));
 
       // URL match patterns.
       const m = PageClip.matchUrl;
