@@ -18,6 +18,7 @@ MEMORY.md = durable facts/agreements; current state -> STATE.md; iteration log -
 ## Project facts
 
 - SM-Clinic visit page (app.smclinic.ru, Vue): class names are readable BEM (`admission-info-wrapper`, `doctor-info-wrapper`), not hashed; the visit date has no year ("Понедельник, 12 октября, 15:06") and no other year exists on the page (only birth date, promo dates, copyright). Weekday inference is ambiguous ("Понедельник, 01 апреля" was 2019, the guess gave 2024), hence the year dialog.
+- SM-Clinic API: visit page loads `GET /api/visits/<uuid>?accountId=…&patientId=…` → `{ visit: { dateTime: "2019-04-01T18:14:00", … } }`; the response also holds full patient data (phone, e-mail, cards), so read only the needed path and never log it.
 - SM-Clinic visit list (`/history?page=N`): each `.medical-info-card` has `.date__day`, `.date__month` ("апр."), `.date__year` ("2019 г."), `.doctor-info__specialization`; "Подробнее о приёме" is a click handler, not a link.
 - SM-Clinic doctor notes (`.doctor-extra-text--list`, `white-space: pre-line`) contain dozens of tabs and tab-only lines per line break.
 - The Claude preview pane opens local files as `data:` URLs, so relative scripts fail; serve the repo with `tools/serve.ps1` instead.

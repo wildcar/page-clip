@@ -11,21 +11,19 @@ presets (first: SM-Clinic "Информация о приёме"). Design: `docs
 
 ## Now
 
-- v0.1 checked by the user on the live SM-Clinic page: works.
-- File name `Приём <date> <specialty>`; visit year asked in an on-page dialog when the weekday
-  fits several years, answer remembered per visit. `test/harness.html` 80/80.
+- v0.1 checked by the user on the live SM-Clinic page: works. File name `Приём <date> <specialty>`.
+- Visit year: from `visit.dateTime` of the visit JSON the page loaded (`/api/visits/<uuid>`);
+  fallback: on-page year dialog, answer remembered per visit. `test/harness.html` 85/85; the real
+  Performance API + fetch path checked against a local mock endpoint.
 
 ## Next
 
-- User check of the year dialog in Yandex Browser.
-- Optional: take the year automatically from the visit list (`/history`), see Open questions.
+- User check on the live SM-Clinic page: the 2019-04-01 visit must get 2019 without a question.
 
 ## Open questions
 
-- Automatic year: the list page shows the year on each card (`.medical-info-card .date__year`),
-  but the visit page does not, and the list is gone after the SPA navigates. Capturing it needs a
-  content script on app.smclinic.ru (optional host permission + background worker), which
-  deviates from "inject on click only". Waiting for the user's decision.
+- Auth of the SM-Clinic API is unknown (cookies or bearer token). The extension tries cookies,
+  then JWT-looking tokens from the page storage; if both fail, the dialog appears.
 
 ## Deferred
 

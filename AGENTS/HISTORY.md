@@ -4,6 +4,12 @@ Newest first. Each entry ≤5 lines using the format defined in `AGENTS.md`.
 
 ---
 
+## 2026-10-30 · Visit year from the site API
+- What: preset field `api` (regex over loaded resource URLs + JSON path); SM-Clinic date takes the year from `visit.dateTime`, checked against page day/month/time
+- Why: the page has no year; the user found `/api/visits/<uuid>` in DevTools
+- Files: extension/content.js, extension/presets/builtin.js, test/harness.html, AGENTS/SPEC.md
+- Next: user check on the live page (auth: cookies or bearer unknown)
+
 ## 2026-10-30 · Ask the visit year instead of guessing
 - What: on-page year dialog for dates without a year (candidates by weekday, custom, none, cancel), answer remembered per visit; buildTitle is async
 - Why: weekday guess gave 2024 for a 2019 visit; the visit page has no year anywhere

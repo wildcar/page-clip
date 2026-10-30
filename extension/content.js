@@ -208,16 +208,99 @@
     }
   }
 
+  // ---------- values from the site's own API ----------
+
+  // JSON the page itself already loaded: the field's `api.url` (regex) is matched against
+  // same-origin resource URLs from the Performance API, newest first, and re-requested.
+  // Overridable in test/harness.html.
+  const apiEnv = {
+    resources: () => performance.getEntriesByType("resource").map((e) => e.name),
+    fetchJson,
+  };
+  const API_ATTEMPTS = 3;
+
+  // JWT-looking strings from the page's storage, for APIs that authorize by a bearer header.
+  function storedTokens() {
+    const tokens = new Set();
+    for (const storage of [localStorage, sessionStorage]) {
+      try {
+        for (let i = 0; i < storage.length; i++) {
+          for (const m of String(storage.getItem(storage.key(i))).matchAll(/eyJ[\w-]+\.[\w-]+\.[\w-]+/g)) tokens.add(m[0]);
+        }
+      } catch {
+        /* storage blocked */
+      }
+    }
+    return [...tokens].slice(0, 5);
+  }
+
+  // Same origin only. Cookies first; on 401/403 retry with tokens found in the page's storage.
+  async function fetchJson(url) {
+    if (new URL(url, location.href).origin !== location.origin) throw new Error("cross-origin");
+    const get = (auth) =>
+      fetch(url, { credentials: "include", headers: { Accept: "application/json", ...(auth && { Authorization: auth }) } });
+    let res = await get();
+    if (res.status === 401 || res.status === 403) {
+      for (const token of storedTokens()) {
+        res = await get(`Bearer ${token}`);
+        if (res.ok) break;
+      }
+    }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  }
+
+  const getPath = (obj, path) => path.split(".").reduce((o, k) => (o == null ? o : o[k]), obj);
+
+  // First value at `api.path` that `accept` agrees with, or null.
+  async function apiValue(api, accept = () => true) {
+    let re;
+    try {
+      re = new RegExp(api.url);
+    } catch {
+      return null;
+    }
+    const urls = [...new Set(apiEnv.resources().filter((u) => re.test(u)))].reverse().slice(0, API_ATTEMPTS);
+    for (const url of urls) {
+      try {
+        const value = getPath(await apiEnv.fetchJson(url), api.path);
+        if (value != null && value !== "" && accept(String(value))) return String(value);
+      } catch {
+        /* try the next one */
+      }
+    }
+    return null;
+  }
+
+  // API date must be the same day (and time, if the page shows one) as the date on the page:
+  // the tab may hold responses for several visits.
+  function sameDate(pageText, page, apiText) {
+    const api = parseDate(apiText);
+    if (!api?.year || api.month !== page.month || api.day !== page.day) return false;
+    const time = /(\d{1,2}):(\d{2})/.exec(pageText);
+    const apiTime = /T(\d{2}):(\d{2})/.exec(apiText);
+    return !time || !apiTime || (Number(time[1]) === Number(apiTime[1]) && time[2] === apiTime[2]);
+  }
+
   class Cancelled extends Error {}
 
-  // Field value for the title. A "date" field with "askYear" and no year on the page asks the
-  // user (via `ask`) when several years fit; `ask` resolves to a year, 0 (no year) or null (cancel).
+  // Field value for the title. A "date" field takes a missing year from `api` when given, then
+  // from a remembered answer, then asks the user (with "askYear", when several years fit);
+  // `ask` resolves to a year, 0 (no year) or null (cancel).
   async function resolveField(field, ask) {
     const text = fieldText(field);
-    if (!text || field.format !== "date") return text && FORMATS[field.format] ? FORMATS[field.format](text) : text;
+    if (field.format !== "date") {
+      const value = text || (field.api ? (await apiValue(field.api)) ?? "" : "");
+      return value && FORMATS[field.format] ? FORMATS[field.format](value) : value;
+    }
+    if (!text) return "";
     const date = parseDate(text);
     if (!date) return text;
     if (date.year) return isoParts(date.year, date);
+    if (field.api) {
+      const fromApi = await apiValue(field.api, (v) => sameDate(text, date, v));
+      if (fromApi) return isoParts(parseDate(fromApi).year, date);
+    }
     const years = candidateYears(date);
     if (!field.askYear || years.length < 2) return years.length ? isoParts(years[0], date) : text;
     let year = await rememberedYear(text);
@@ -881,6 +964,6 @@
     startPicker,
     stopPicker,
     // Exposed for test/harness.html.
-    _test: { locateBlocks, buildTitle, buildMarkdown, saveMarkdown, mark, tidyPreformatted, cleanup, cssSelectorFor, formatDate, parseDate, candidateYears, askYear, formatInitials, looksGenerated },
+    _test: { locateBlocks, buildTitle, buildMarkdown, saveMarkdown, mark, tidyPreformatted, cleanup, cssSelectorFor, formatDate, parseDate, candidateYears, askYear, apiEnv, formatInitials, looksGenerated },
   };
 })();

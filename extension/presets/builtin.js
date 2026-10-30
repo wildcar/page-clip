@@ -27,7 +27,13 @@ PageClip.BUILTIN = [
     ],
     title: "Приём {date} {specialty}",
     fields: {
-      date: { afterLabel: "Дата приёма", format: "date", askYear: true },
+      date: {
+        afterLabel: "Дата приёма",
+        format: "date",
+        // The page shows no year; the visit JSON the page loads has "visit.dateTime".
+        api: { url: "/api/visits/[0-9a-f-]{36}(\\?|$)", path: "visit.dateTime" },
+        askYear: true,
+      },
       specialty: { selector: ".doctor-info .doctors-specialization" },
     },
   },

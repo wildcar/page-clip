@@ -208,6 +208,29 @@
       check("title: cancel aborts", cancelled);
       const noAsk = { ...preset, fields: { ...preset.fields, date: { afterLabel: "Дата приёма", format: "date" } } };
       eq("title: without askYear the newest year is used", await T.buildTitle(noAsk, answer(1999)), "Приём 2026-10-12 Дерматовенеролог");
+      // Year from the site's API (resources and responses stubbed).
+      const env = T.apiEnv;
+      const real = { ...env };
+      const base = `${location.origin}/api/visits/`;
+      const idA = "aaaaaaaa-1111-2222-3333-444444444444";
+      const idB = "bbbbbbbb-1111-2222-3333-444444444444";
+      const responses = {
+        [`${base}${idB}?accountId=x`]: { visit: { dateTime: "2020-10-12T15:06:00" } },
+        [`${base}${idA}?accountId=x`]: { visit: { dateTime: "2019-04-01T18:14:00" } },
+      };
+      const fetched = [];
+      env.resources = () => [`${base}${idB}?accountId=x`, `${location.origin}/api/visits?page=0`, `${base}${idA}?accountId=x`];
+      env.fetchJson = async (url) => (fetched.push(url), structuredClone(responses[url]));
+      asked = null;
+      eq("api: year from the matching visit", await T.buildTitle(preset, answer(1999)), "Приём 2020-10-12 Дерматовенеролог");
+      check("api: no question asked", asked === null);
+      eq("api: newest resource tried first, list URL ignored", fetched, [`${base}${idA}?accountId=x`, `${base}${idB}?accountId=x`]);
+      responses[`${base}${idB}?accountId=x`].visit.dateTime = "2020-10-12T09:00:00";
+      eq("api: other time → ask", await T.buildTitle(preset, answer(2015)), "Приём 2015-10-12 Дерматовенеролог");
+      env.fetchJson = async () => { throw new Error("HTTP 401"); };
+      eq("api: failed request → ask", await T.buildTitle(preset, answer(2009)), "Приём 2009-10-12 Дерматовенеролог");
+      Object.assign(env, real);
+
       eq("all fields unresolved → page title", await T.buildTitle({ title: "{x} {y}", fields: {} }), "SM-Clinic | История посещений");
       eq("candidates: 1 April Monday", T.candidateYears(T.parseDate("Понедельник, 01 апреля, 18:14")).slice(0, 2), [2024, 2019]);
       eq("candidates: explicit year parsed", T.parseDate("1 марта 2024").year, 2024);
