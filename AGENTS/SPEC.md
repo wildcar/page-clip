@@ -47,7 +47,7 @@ presets/builtin.js ── read-only built-in presets
 6. ✅ Output file name comes from the preset `title` template; unresolved placeholders are dropped; if every placeholder is unresolved or there is no template, the page title is used.
 7. ✅ Options page: built-in presets (read-only, can be duplicated) and user presets; rename, edit as JSON, delete, export/import JSON (import merges by `id`).
 8. ✅ Built-in preset `smclinic-visit`: page heading, visit card (date, clinic, address, patient, status), doctor card (doctor, specialty, services, recommendations); hides "Повторить запись", "Поделиться", "К списку приёмов", breadcrumbs; title `Приём {date} {specialty}` → `Приём 2026-10-12 Дерматовенеролог` (no doctor name).
-9. ✅ Visit year: the SM-Clinic visit page shows no year. It is taken from `visit.dateTime` of the visit JSON the page itself loaded (`/api/visits/<uuid>`), accepted only when day, month and time match the page. Otherwise, when several years fit the weekday, a dialog on the page offers them (newest first, up to 4), a custom year, "Без года" (`MM-DD`) or "Отмена" (Esc; nothing is saved). The answer is remembered in `chrome.storage.local` (`year:<host>:<date text>`) and not asked again.
+9. ✅ Visit year: the SM-Clinic visit page shows no year. It is taken from `visit.dateTime` of the visit JSON the page itself loaded (`/api/visits/<uuid>`), accepted only when day, month and time match the page. Otherwise, when several years fit the weekday, a dialog on the page offers them (newest first, up to 4), a custom year, "Без года" (`MM-DD`) or "Отмена" (Esc; nothing is saved). The answer is remembered in `chrome.storage.local` (`year:<host>:<date text>`) and not asked again. A year from the API or the user is also written into the date text of the saved PDF / Markdown ("01 апреля 2019, 18:14"); the page text is restored afterwards.
 
 ## Preset format
 
@@ -77,6 +77,7 @@ presets/builtin.js ── read-only built-in presets
 - Fields: `selector` (text of first match) or `afterLabel` (text of the first non-empty element after the label). `format`: `date` → `YYYY-MM-DD` (Russian dates; a missing year: candidates are years since 2000, not in the future, whose weekday matches; with `"askYear": true` and several candidates the user is asked, otherwise the newest is used), `initials` → `Фамилия И.О.`.
 - Field `api` (`{ url: <regex>, path: "a.b.c" }`): value from JSON the page already loaded. Same-origin resource URLs from `performance.getEntriesByType("resource")` matching `url` are re-requested, newest first, at most 3 (cookies; on 401/403 retried with JWT-looking tokens from the page's local/session storage, same origin only). Only the value at `path` is read. For a `date` field it supplies the missing year and must match the page's day, month and time; for other fields it is used when the page text is empty.
 - Year resolution order for a date without a year: `api` → remembered answer → question (`askYear`) → newest candidate.
+- `insertYear: true` on a date field: a year from `api` or from the user (not a guess, not "no year") is inserted after the month in the field element's text while exporting; cleanup restores it.
 - Picker-generated selectors prefer a stable `id`, then `data-*` / ARIA / `role` / `name` attributes, then stable class names, then `:nth-of-type`; hash-like ids, classes and values are skipped.
 
 ## Print technique
@@ -120,7 +121,7 @@ AGENTS/                 agent docs (spec, state, history, memory, env)
 
 ## Current state
 
-- ✅ Requirements 1–8 implemented. `test/harness.html`: 85/85. Print layout (print.css applied on screen), Markdown and picker checked on a local copy of the real SM-Clinic page.
+- ✅ Requirements 1–9 implemented. `test/harness.html`: 91/91. Print layout (print.css applied on screen), Markdown and picker checked on a local copy of the real SM-Clinic page.
 - ⏳ Check as an installed extension in Yandex Browser: live SM-Clinic page, an arbitrary site, options export/import.
 
 See `AGENTS/STATE.md` for the live Now / Next snapshot.

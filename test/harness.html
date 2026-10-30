@@ -225,6 +225,27 @@
       eq("api: year from the matching visit", await T.buildTitle(preset, answer(1999)), "Приём 2020-10-12 Дерматовенеролог");
       check("api: no question asked", asked === null);
       eq("api: newest resource tried first, list URL ignored", fetched, [`${base}${idA}?accountId=x`, `${base}${idB}?accountId=x`]);
+
+      // Year inserted into the page date text while exporting, restored afterwards.
+      const dateEl = $(".admission-date h2");
+      const inserts = [];
+      await T.buildTitle(preset, answer(1999), inserts);
+      eq("insert: queued for the date element", inserts.map((i) => [i.el === dateEl, i.year]), [[true, 2020]]);
+      T.mark(blocks, preset.hide, inserts);
+      eq("insert: year after the month", dateEl.textContent, "Понедельник, 12 октября 2020, 15:06");
+      const insMd = T.buildMarkdown(blocks, "x");
+      T.cleanup();
+      check("insert: year in Markdown", insMd.includes("Понедельник, 12 октября 2020, 15:06"));
+      eq("insert: text restored", dateEl.textContent, "Понедельник, 12 октября, 15:06");
+      const workingFetch = env.fetchJson;
+      env.fetchJson = async () => { throw new Error("HTTP 401"); };
+      const noYear = [];
+      await T.buildTitle(preset, answer(0), noYear);
+      eq("insert: nothing queued for 'no year'", noYear.length, 0);
+      const asked2020 = [];
+      await T.buildTitle(preset, answer(2020), asked2020);
+      eq("insert: queued for an asked year", asked2020.map((i) => i.year), [2020]);
+      env.fetchJson = workingFetch;
       responses[`${base}${idB}?accountId=x`].visit.dateTime = "2020-10-12T09:00:00";
       eq("api: other time → ask", await T.buildTitle(preset, answer(2015)), "Приём 2015-10-12 Дерматовенеролог");
       env.fetchJson = async () => { throw new Error("HTTP 401"); };

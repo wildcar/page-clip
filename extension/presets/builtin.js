@@ -33,6 +33,8 @@ PageClip.BUILTIN = [
         // The page shows no year; the visit JSON the page loads has "visit.dateTime".
         api: { url: "/api/visits/[0-9a-f-]{36}(\\?|$)", path: "visit.dateTime" },
         askYear: true,
+        // Show the found year in the saved document: "01 апреля 2019, 18:14".
+        insertYear: true,
       },
       specialty: { selector: ".doctor-info .doctors-specialization" },
     },

@@ -11,18 +11,18 @@ presets (first: SM-Clinic "Информация о приёме"). Design: `docs
 
 ## Now
 
-- v0.1 checked by the user on the live SM-Clinic page: works. File name `Приём <date> <specialty>`.
+- v0.1 checked by the user on the live SM-Clinic page: works, year 2019 taken from the API. File name `Приём <date> <specialty>`; the found year is also inserted into the date text of the saved document.
 - Visit year: from `visit.dateTime` of the visit JSON the page loaded (`/api/visits/<uuid>`);
-  fallback: on-page year dialog, answer remembered per visit. `test/harness.html` 85/85; the real
+  fallback: on-page year dialog, answer remembered per visit. `test/harness.html` 91/91; the real
   Performance API + fetch path checked against a local mock endpoint.
 
 ## Next
 
-- User check on the live SM-Clinic page: the 2019-04-01 visit must get 2019 without a question.
+- User check: PDF and Markdown show "01 апреля 2019, 18:14"; page text unchanged after printing.
 
 ## Open questions
 
-- Auth of the SM-Clinic API is unknown (cookies or bearer token). The extension tries cookies,
+- SM-Clinic API auth works with what the extension sends (user check 2026-10-30). The extension tries cookies,
   then JWT-looking tokens from the page storage; if both fail, the dialog appears.
 
 ## Deferred

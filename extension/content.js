@@ -176,17 +176,30 @@
 
   const FORMATS = { date: formatDate, initials: formatInitials };
 
-  function fieldText(field) {
-    let el = null;
-    if (field.selector) {
-      el = querySafe(field.selector);
-    } else if (field.afterLabel) {
+  function fieldElement(field) {
+    if (field.selector) return querySafe(field.selector);
+    if (field.afterLabel) {
       for (const label of elementsWithText(field.afterLabel)) {
-        el = nextValueAfter(label);
-        if (el) break;
+        const el = nextValueAfter(label);
+        if (el) return el;
       }
     }
-    return clean(el?.textContent);
+    return null;
+  }
+
+  // Adds `year` after the first "<day> <month>" in el's text: "01 апреля, 18:14" → "01 апреля 2019, 18:14".
+  // Changed text nodes go to changedText, so cleanup() restores them.
+  function insertYearInto(el, year) {
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const m = /(\d{1,2}\s+([А-Яа-яЁё]+))(?!\s*\d{4})/.exec(node.nodeValue);
+      if (!m || !MONTHS.some((p) => m[2].toLowerCase().replace(/ё/g, "е").startsWith(p))) continue;
+      const at = m.index + m[1].length;
+      changedText.set(node, node.nodeValue);
+      node.nodeValue = node.nodeValue.slice(0, at) + " " + year + node.nodeValue.slice(at);
+      return true;
+    }
+    return false;
   }
 
   // Year chosen by the user for a date shown without one, remembered per site and date text.
@@ -286,9 +299,11 @@
 
   // Field value for the title. A "date" field takes a missing year from `api` when given, then
   // from a remembered answer, then asks the user (with "askYear", when several years fit);
-  // `ask` resolves to a year, 0 (no year) or null (cancel).
-  async function resolveField(field, ask) {
-    const text = fieldText(field);
+  // `ask` resolves to a year, 0 (no year) or null (cancel). With "insertYear", a year known from
+  // the API or the user is queued in `inserts` to be shown in the page text while exporting.
+  async function resolveField(field, ask, inserts) {
+    const el = fieldElement(field);
+    const text = clean(el?.textContent);
     if (field.format !== "date") {
       const value = text || (field.api ? (await apiValue(field.api)) ?? "" : "");
       return value && FORMATS[field.format] ? FORMATS[field.format](value) : value;
@@ -297,9 +312,13 @@
     const date = parseDate(text);
     if (!date) return text;
     if (date.year) return isoParts(date.year, date);
+    const known = (year) => {
+      if (field.insertYear && year) inserts.push({ el, year });
+      return isoParts(year, date);
+    };
     if (field.api) {
       const fromApi = await apiValue(field.api, (v) => sameDate(text, date, v));
-      if (fromApi) return isoParts(parseDate(fromApi).year, date);
+      if (fromApi) return known(parseDate(fromApi).year);
     }
     const years = candidateYears(date);
     if (!field.askYear || years.length < 2) return years.length ? isoParts(years[0], date) : text;
@@ -309,17 +328,18 @@
       if (year === null) throw new Cancelled();
       await rememberYear(text, year);
     }
-    return year ? isoParts(year, date) : `${pad(date.month + 1)}-${pad(date.day)}`;
+    return year ? known(year) : `${pad(date.month + 1)}-${pad(date.day)}`;
   }
 
-  // Rejects with Cancelled when the user cancels a question.
-  async function buildTitle(preset, ask = askYear) {
+  // Rejects with Cancelled when the user cancels a question. Year insertions for the page text
+  // (see resolveField) are collected into `inserts`.
+  async function buildTitle(preset, ask = askYear, inserts = []) {
     const fallback = clean(document.title) || location.hostname;
     if (!preset?.title) return fallback;
     const values = {};
     for (const key of new Set([...preset.title.matchAll(/\{(\w+)\}/g)].map((m) => m[1]))) {
       const field = preset.fields?.[key];
-      values[key] = field ? await resolveField(field, ask) : "";
+      values[key] = field ? await resolveField(field, ask, inserts) : "";
     }
     const keys = Object.keys(values);
     const result = clean(preset.title.replace(/\{(\w+)\}/g, (_, key) => values[key]));
@@ -396,8 +416,9 @@
 
   // ---------- marking & export ----------
 
-  // Original values of text nodes changed by tidyPreformatted(), restored by cleanup().
-  const tidiedText = new Map();
+  // Original values of text nodes changed for export (tidyPreformatted, insertYearInto),
+  // restored by cleanup().
+  const changedText = new Map();
 
   // Preformatted text that is not code (user-entered notes) often has runs of tabs and
   // whitespace-only lines that become large gaps on paper. For printing: pre/pre-wrap switch
@@ -412,32 +433,33 @@
         if (node.nodeType !== Node.TEXT_NODE || !node.nodeValue.includes("\n")) continue;
         const tidy = node.nodeValue.replace(/[ \t ]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").replace(/^\n+|\s+$/g, "");
         if (tidy === node.nodeValue) continue;
-        tidiedText.set(node, node.nodeValue);
+        changedText.set(node, node.nodeValue);
         node.nodeValue = tidy;
       }
     }
   }
 
   function cleanup() {
-    for (const [node, value] of tidiedText) node.nodeValue = value;
-    tidiedText.clear();
+    for (const [node, value] of changedText) node.nodeValue = value;
+    changedText.clear();
     for (const name of [ATTR.keep, ATTR.path, ATTR.hide, ATTR.active, ATTR.preline]) {
       for (const el of document.querySelectorAll(`[${name}]`)) el.removeAttribute(name);
     }
   }
 
-  function mark(blocks, hideRules) {
+  function mark(blocks, hideRules, inserts = []) {
     cleanup();
     for (const block of blocks) {
       block.setAttribute(ATTR.keep, "");
       for (let p = block.parentElement; p; p = p.parentElement) p.setAttribute(ATTR.path, "");
     }
     applyHide(hideRules);
+    for (const { el, year } of inserts) if (el?.isConnected) insertYearInto(el, year);
     document.documentElement.setAttribute(ATTR.active, "");
   }
 
-  function printBlocks(blocks, hideRules, title) {
-    mark(blocks, hideRules);
+  function printBlocks(blocks, hideRules, title, inserts) {
+    mark(blocks, hideRules, inserts);
     blocks.forEach(tidyPreformatted);
     const originalTitle = document.title;
     let restored = false;
@@ -465,8 +487,8 @@
     setTimeout(() => URL.revokeObjectURL(url), 10000);
   }
 
-  function saveMarkdown(blocks, hideRules, title) {
-    mark(blocks, hideRules);
+  function saveMarkdown(blocks, hideRules, title, inserts) {
+    mark(blocks, hideRules, inserts);
     let md;
     try {
       md = buildMarkdown(blocks, title);
@@ -477,9 +499,9 @@
     return md;
   }
 
-  function exportBlocks(blocks, hideRules, title, format) {
-    if (format === "md") saveMarkdown(blocks, hideRules, title);
-    else printBlocks(blocks, hideRules, title);
+  function exportBlocks(blocks, hideRules, title, format, inserts = []) {
+    if (format === "md") saveMarkdown(blocks, hideRules, title, inserts);
+    else printBlocks(blocks, hideRules, title, inserts);
   }
 
   // ---------- DOM → Markdown ----------
@@ -948,13 +970,14 @@
     // window.print() blocks until the dialog closes.
     setTimeout(async () => {
       let title;
+      const inserts = [];
       try {
-        title = await buildTitle(preset);
+        title = await buildTitle(preset, askYear, inserts);
       } catch (e) {
         if (e instanceof Cancelled) return;
         throw e;
       }
-      exportBlocks(blocks, preset.hide, title, format);
+      exportBlocks(blocks, preset.hide, title, format, inserts);
     }, 50);
     return { ok: true, found: blocks.length };
   }
@@ -964,6 +987,6 @@
     startPicker,
     stopPicker,
     // Exposed for test/harness.html.
-    _test: { locateBlocks, buildTitle, buildMarkdown, saveMarkdown, mark, tidyPreformatted, cleanup, cssSelectorFor, formatDate, parseDate, candidateYears, askYear, apiEnv, formatInitials, looksGenerated },
+    _test: { locateBlocks, buildTitle, buildMarkdown, saveMarkdown, mark, tidyPreformatted, cleanup, cssSelectorFor, formatDate, parseDate, candidateYears, askYear, apiEnv, insertYearInto, formatInitials, looksGenerated },
   };
 })();

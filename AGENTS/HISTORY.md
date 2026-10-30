@@ -4,6 +4,12 @@ Newest first. Each entry ≤5 lines using the format defined in `AGENTS.md`.
 
 ---
 
+## 2026-10-30 · Visit year shown in the saved date
+- What: date field option `insertYear`; a year from the API or the user is inserted after the month in the page text during export, restored afterwards
+- Why: user request: "Понедельник, 01 апреля 2019, 18:14" in the PDF
+- Files: extension/content.js, extension/presets/builtin.js, test/harness.html, AGENTS/SPEC.md
+- Next: user check of PDF and Markdown
+
 ## 2026-10-30 · Visit year from the site API
 - What: preset field `api` (regex over loaded resource URLs + JSON path); SM-Clinic date takes the year from `visit.dateTime`, checked against page day/month/time
 - Why: the page has no year; the user found `/api/visits/<uuid>` in DevTools
